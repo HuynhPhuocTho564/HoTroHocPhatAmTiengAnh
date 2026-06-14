@@ -1,47 +1,87 @@
-import React from 'react';
-import { prisma } from '@/lib/prisma';
-import ExerciseEngineClient from './ExerciseEngineClient';
-import { notFound } from 'next/navigation';
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import ExerciseEngineClient from "./ExerciseEngineClient";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+type JsonOption = {
+  id?: unknown;
+  text?: unknown;
+  content?: unknown;
+};
+
+function isJsonOption(value: unknown): value is JsonOption {
+  return Boolean(value) && typeof value === "object";
+}
+
+function getQuestionOptions(question: {
+  id: string;
+  content: string;
+  options: Array<{ id: string; content: string }>;
+}) {
+  if (question.options.length > 0) {
+    return question.options.map((option) => ({
+      id: option.id,
+      content: option.content,
+    }));
+  }
+
+  try {
+    const parsed = JSON.parse(question.content) as { options?: unknown };
+    if (Array.isArray(parsed.options)) {
+      return parsed.options
+        .filter(isJsonOption)
+        .map((option, index) => ({
+          id: String(option.id ?? `${question.id}-opt-${index}`),
+          content: String(option.text ?? option.content ?? ""),
+        }))
+        .filter((option) => option.content.length > 0);
+    }
+  } catch {
+    // Plain text question content has no embedded options.
+  }
+
+  return [];
+}
 
 export default async function ExercisePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Lấy chi tiết bài tập cùng danh sách câu hỏi và các phương án
   const exercise = await prisma.exercise.findUnique({
-    where: { id },
+    where: {
+      id,
+      status: "ACTIVE",
+    },
     include: {
       questions: {
+        where: {
+          status: "ACTIVE",
+        },
         include: {
           options: true,
-          type: true
-        }
-      }
-    }
+          type: true,
+        },
+      },
+    },
   });
 
   if (!exercise) {
     notFound();
   }
 
-  // Format dữ liệu gửi xuống Client Component
   const exerciseData = {
     id: exercise.id,
     name: exercise.name,
     description: exercise.description,
-    questions: exercise.questions.map(q => ({
-      id: q.id,
-      name: q.name,
-      content: q.content, // audioUrl hoặc text
-      type: q.type.id, // qtype-1-mc (Trắc nghiệm), qtype-2-voice (Thu âm)
-      answer: q.answer,
-      score: q.score,
-      options: q.options.map(opt => ({
-        id: opt.id,
-        content: opt.content
-      }))
-    }))
+    questions: exercise.questions.map((question) => ({
+      id: question.id,
+      name: question.name,
+      content: question.content,
+      type: question.type.id,
+      answer: question.answer,
+      score: question.score,
+      options: getQuestionOptions(question),
+    })),
   };
 
   return <ExerciseEngineClient exercise={exerciseData} />;

@@ -1,156 +1,295 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import DailyCheckIn from "@/components/gamification/DailyCheckIn";
+import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
+import { auth } from "@/lib/auth";
+import { getNextLevelXp } from "@/lib/gamification";
+import { prisma } from "@/lib/prisma";
 
-import React from 'react';
-import DailyCheckIn from '@/components/gamification/DailyCheckIn';
+function formatAttemptStatus(status: string) {
+  if (status === "COMPLETED") return "Đã hoàn thành";
+  if (status === "NEEDS_PRACTICE") return "Cần luyện thêm";
+  return status;
+}
 
-export default function DashboardPage() {
-  const mockUser = {
-    name: "Alex",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-    level: "Trung cấp",
-    levelNum: 12,
-    totalXP: "1.250",
-    streakDays: 5,
-    completedLessons: 24,
-    currentLesson: {
-      name: "Âm Schwa /ə/",
-      desc: "Làm chủ nguyên âm phổ biến nhất trong tiếng Anh.",
-      progress: 65
-    }
-  };
+function primaryLinkClass() {
+  return "inline-flex min-h-11 items-center justify-center rounded-lg bg-neutral-900 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-neutral-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
+}
+
+function quietLinkClass() {
+  return "block rounded-lg px-3 py-3 font-semibold text-neutral-700 transition-colors hover:bg-neutral-200/70 hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500";
+}
+
+export default async function DashboardPage() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login?callbackUrl=/dashboard");
+  }
+
+  const [user, completedExerciseGroups, totalActiveExercises] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+        xp: true,
+        level: true,
+        streakCount: true,
+        longestStreak: true,
+        totalCheckIns: true,
+        lastCheckInDate: true,
+        exerciseAttempts: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 5,
+          select: {
+            id: true,
+            score: true,
+            status: true,
+            createdAt: true,
+            exercise: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
+          },
+        },
+        userBadges: {
+          orderBy: {
+            earnedAt: "desc",
+          },
+          take: 4,
+          include: {
+            badge: true,
+          },
+        },
+      },
+    }),
+    prisma.exerciseAttempt.groupBy({
+      by: ["exerciseId"],
+      where: {
+        userId: session.user.id,
+        score: {
+          gte: 70,
+        },
+      },
+    }),
+    prisma.exercise.count({
+      where: {
+        status: "ACTIVE",
+      },
+    }),
+  ]);
+
+  if (!user) {
+    redirect("/login?callbackUrl=/dashboard");
+  }
+
+  const completedExerciseCount = completedExerciseGroups.length;
+  const nextLevelXp = getNextLevelXp(user.level);
+  const previousLevelXp = user.level <= 1 ? 0 : getNextLevelXp(user.level - 1);
+  const levelProgress =
+    nextLevelXp === previousLevelXp
+      ? 0
+      : Math.min(100, Math.round(((user.xp - previousLevelXp) / (nextLevelXp - previousLevelXp)) * 100));
+  const latestAttempt = user.exerciseAttempts[0];
+  const remainingXp = Math.max(0, nextLevelXp - user.xp);
 
   return (
     <div className="min-h-screen bg-white">
-      <main className="max-w-7xl mx-auto flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
-        
-        {/* ========================================================
-            CỘT TRÁI (MAIN CONTENT) - Chiếm 2/3
-            ======================================================== */}
-        <div className="flex-1 px-4 sm:px-6 lg:px-12 py-10 border-r border-neutral-200">
-          
-          {/* Lời chào (Greeting) */}
-          <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 leading-tight tracking-tight mb-6">
-            Xin chào, {mockUser.name}! Hãy cùng luyện tập những âm mới hôm nay.
-          </h1>
+      <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-7xl flex-col lg:flex-row">
+        <div className="flex-1 border-neutral-200 px-4 py-10 sm:px-6 lg:border-r lg:px-12">
+          <section aria-labelledby="dashboard-heading">
+            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-primary-700">Dashboard</p>
+            <h1 id="dashboard-heading" className="mb-6 text-4xl font-bold leading-tight tracking-tight text-neutral-900 md:text-5xl">
+              Xin chào, {user.username}. Hôm nay bạn có thể tiếp tục luyện phát âm.
+            </h1>
 
-          {/* Inline Badges - Removed XP */}
-          <div className="flex flex-wrap gap-4 mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg text-sm font-bold text-orange-700 border-2 border-orange-300 shadow-sm">
-              <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
-              </svg>
-              🔥 {mockUser.streakDays} ngày liên tiếp
-            </div>
-            
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg text-sm font-bold text-purple-700 border-2 border-purple-300 shadow-sm">
-              <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              ✅ {mockUser.completedLessons} bài đã hoàn thành
-            </div>
-          </div>
+            <dl className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-warning-200 bg-warning-50 p-4">
+                <dt className="text-sm font-semibold text-warning-700">Chuỗi học</dt>
+                <dd className="mt-1 text-2xl font-bold text-warning-800">{user.streakCount} ngày</dd>
+              </div>
+              <div className="rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <dt className="text-sm font-semibold text-primary-700">Cấp độ</dt>
+                <dd className="mt-1 text-2xl font-bold text-primary-800">{user.level}</dd>
+              </div>
+              <div className="rounded-lg border border-success-200 bg-success-50 p-4">
+                <dt className="text-sm font-semibold text-success-700">Bài đã đạt</dt>
+                <dd className="mt-1 text-2xl font-bold text-success-800">
+                  {completedExerciseCount}/{totalActiveExercises}
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-          {/* Continue Learning Card */}
-          <div className="border border-neutral-200 rounded-xl p-8 hover:shadow-md transition-shadow bg-white">
-            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
-              Tiếp tục học
-            </span>
-            <h2 className="text-3xl font-bold text-neutral-900 mb-2">
-              {mockUser.currentLesson.name}
+          <Card className="mb-8" padding="lg">
+            <section aria-labelledby="xp-progress-heading">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Tiến độ XP</p>
+                  <h2 id="xp-progress-heading" className="text-3xl font-bold text-neutral-900">
+                    {user.xp.toLocaleString("vi-VN")} XP
+                  </h2>
+                  <p className="mt-2 text-neutral-600">
+                    Cần {remainingXp.toLocaleString("vi-VN")} XP để chạm mốc cấp tiếp theo.
+                  </p>
+                </div>
+                <div className="w-full lg:w-80">
+                  <div className="mb-2 flex justify-between text-sm font-bold text-neutral-600">
+                    <span>Cấp {user.level}</span>
+                    <span>{levelProgress}%</span>
+                  </div>
+                  <div
+                    className="h-2 w-full rounded-full bg-neutral-100"
+                    role="progressbar"
+                    aria-label="Tiến độ lên cấp"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={levelProgress}
+                  >
+                    <div className="h-2 rounded-full bg-neutral-900" style={{ width: `${levelProgress}%` }} />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </Card>
+
+          <Card padding="lg">
+            <section aria-labelledby="continue-learning-heading">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Tiếp tục học</p>
+              {latestAttempt ? (
+                <>
+                  <h2 id="continue-learning-heading" className="mb-2 text-3xl font-bold text-neutral-900">
+                    {latestAttempt.exercise.name}
+                  </h2>
+                  <p className="mb-6 text-neutral-600">
+                    Lần gần nhất đạt {latestAttempt.score}/100 điểm. Hãy làm lại để cải thiện best score.
+                  </p>
+                  <Link
+                    href={`/exercises/${latestAttempt.exercise.id}`}
+                    className={primaryLinkClass()}
+                    aria-label={`Vào bài tập ${latestAttempt.exercise.name}`}
+                  >
+                    Vào bài tập
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <h2 id="continue-learning-heading" className="mb-2 text-3xl font-bold text-neutral-900">
+                    Bắt đầu bài luyện đầu tiên
+                  </h2>
+                  <p className="mb-6 text-neutral-600">
+                    Hoàn thành bài đầu tiên để bắt đầu tính XP, điểm hạng và huy hiệu.
+                  </p>
+                  <Link href="/learning_map" className={primaryLinkClass()}>
+                    Chọn bài học
+                  </Link>
+                </>
+              )}
+            </section>
+          </Card>
+
+          <section className="mt-8" aria-labelledby="recent-attempts-heading">
+            <h2 id="recent-attempts-heading" className="mb-4 text-xl font-bold text-neutral-900">
+              Bài làm gần đây
             </h2>
-            <p className="text-neutral-600 mb-8">
-              {mockUser.currentLesson.desc}
-            </p>
-
-            {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="flex justify-between text-sm font-bold text-neutral-600 mb-2">
-                <span>Tiến độ</span>
-                <span>{mockUser.currentLesson.progress}%</span>
+            {user.exerciseAttempts.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {user.exerciseAttempts.slice(0, 4).map((attempt) => (
+                  <Card key={attempt.id}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-bold text-neutral-900">{attempt.exercise.name}</h3>
+                        <p className="mt-1 text-sm text-neutral-500">
+                          {attempt.createdAt.toLocaleDateString("vi-VN")} - {formatAttemptStatus(attempt.status)}
+                        </p>
+                      </div>
+                      <Badge variant={attempt.score >= 70 ? "success" : "warning"} size="sm">
+                        {attempt.score}/100
+                      </Badge>
+                    </div>
+                  </Card>
+                ))}
               </div>
-              <div className="w-full bg-neutral-100 rounded-full h-1.5">
-                <div 
-                  className="bg-neutral-900 h-1.5 rounded-full" 
-                  style={{ width: `${mockUser.currentLesson.progress}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <button className="bg-neutral-900 text-white font-bold py-3 px-8 rounded-lg hover:bg-neutral-800 transition-colors shadow-sm w-full sm:w-auto">
-              Tiếp tục học
-            </button>
-          </div>
-
+            ) : (
+              <Card>
+                <p className="text-neutral-600">Chưa có bài làm nào. Hãy chọn một bài trong lộ trình để bắt đầu.</p>
+              </Card>
+            )}
+          </section>
         </div>
 
-        {/* ========================================================
-            CỘT PHẢI (SIDEBAR) - Chiếm 1/3
-            ======================================================== */}
-        <aside className="w-full lg:w-[380px] bg-neutral-50 p-6 sm:p-10 border-l border-neutral-200">
-          
-          {/* User Profile Snippet */}
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-16 h-16 rounded-2xl bg-neutral-800 flex items-center justify-center p-2 shadow-md">
-              <img src={mockUser.avatar} alt="Avatar" className="rounded-xl w-full h-full object-cover bg-white" />
+        <aside className="w-full border-neutral-200 bg-neutral-50 p-6 sm:p-10 lg:w-[380px] lg:border-l" aria-label="Thông tin học viên">
+          <section className="mb-8 flex items-center gap-4" aria-label="Hồ sơ ngắn">
+            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-neutral-800 p-2 shadow-sm">
+              <img
+                src={user.avatarUrl ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full rounded-md bg-white object-cover"
+              />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-neutral-900 leading-tight">Chào mừng<br/>quay trở lại</h3>
-              <p className="text-sm text-neutral-500 font-medium">Học viên cấp độ {mockUser.levelNum}</p>
+              <h2 className="text-lg font-bold leading-tight text-neutral-900">{user.username}</h2>
+              <p className="text-sm font-medium text-neutral-500">Học viên cấp độ {user.level}</p>
             </div>
-          </div>
+          </section>
 
-          {/* Quick Links */}
-          <div className="space-y-2 mb-10">
-            <a href="/checkin" className="flex items-center gap-4 py-3 px-2 rounded-lg hover:bg-neutral-200/50 text-neutral-700 font-medium transition-colors">
-              <svg className="w-6 h-6 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-              Điểm danh hàng ngày
-            </a>
-            <a href="/leaderboard" className="flex items-center gap-4 py-3 px-2 rounded-lg hover:bg-neutral-200/50 text-neutral-700 font-medium transition-colors">
-              <svg className="w-6 h-6 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+          <nav className="mb-8 space-y-2" aria-label="Liên kết nhanh dashboard">
+            <Link href="/checkin" className={quietLinkClass()}>
+              Điểm danh hằng ngày
+            </Link>
+            <Link href="/leaderboard" className={quietLinkClass()}>
               Bảng xếp hạng
-            </a>
-            <a href="/badges" className="flex items-center gap-4 py-3 px-2 rounded-lg hover:bg-neutral-200/50 text-neutral-700 font-medium transition-colors">
-              <svg className="w-6 h-6 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
+            </Link>
+            <Link href="/badges" className={quietLinkClass()}>
               Huy hiệu
-            </a>
-          </div>
+            </Link>
+          </nav>
 
-          {/* Daily Check-in Widget */}
           <div className="mb-6">
             <DailyCheckIn
-              currentStreak={mockUser.streakDays}
-              longestStreak={15}
-              lastCheckIn="2026-05-31T10:30:00"
+              currentStreak={user.streakCount}
+              longestStreak={user.longestStreak}
+              totalCheckIns={user.totalCheckIns}
+              lastCheckIn={user.lastCheckInDate?.toISOString() ?? null}
             />
           </div>
 
-          {/* Stats Cards - Only Completed Lessons */}
-          <div className="space-y-4">
-            {/* BÀI HỌC ĐÃ HOÀN THÀNH */}
-            <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-xl border-2 border-teal-300 shadow-md hover:shadow-lg transition-all duration-300">
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-2 block">Bài học đã hoàn thành</span>
-                  <span className="text-4xl font-bold text-teal-700">{mockUser.completedLessons}</span>
-                </div>
-                <div className="text-5xl">✅</div>
-              </div>
-            </div>
-          </div>
-
-          <button className="w-full mt-6 py-3 px-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-lg text-sm font-bold hover:from-primary-700 hover:to-accent-700 transition-all duration-300 shadow-md hover:shadow-lg">
-            Xem tất cả thống kê
-          </button>
-
+          <Card>
+            <section aria-labelledby="recent-badges-heading">
+              <h2 id="recent-badges-heading" className="mb-4 text-lg font-bold text-neutral-900">
+                Huy hiệu gần đây
+              </h2>
+              {user.userBadges.length > 0 ? (
+                <ul className="space-y-3">
+                  {user.userBadges.map((userBadge) => (
+                    <li key={userBadge.id} className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-neutral-900">{userBadge.badge.name}</p>
+                        <p className="text-xs text-neutral-500">{userBadge.earnedAt.toLocaleDateString("vi-VN")}</p>
+                      </div>
+                      <Badge variant="info" size="sm">
+                        {userBadge.badge.type}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neutral-600">
+                  Chưa có huy hiệu. Hãy hoàn thành bài tập hoặc điểm danh để mở khóa.
+                </p>
+              )}
+            </section>
+          </Card>
         </aside>
-
       </main>
     </div>
   );

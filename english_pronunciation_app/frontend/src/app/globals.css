@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Tailwind v4 Theme - Blue + Orange Color System (Educational) */
 @theme {
@@ -108,6 +109,133 @@
 /* Font IPA */
 .font-ipa {
   font-family: var(--font-ipa), 'Noto Sans', serif;
+}
+
+html {
+  background: #f9fafb;
+}
+
+html.dark {
+  background: #030712;
+}
+
+body {
+  background: #f9fafb;
+  color: #111827;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+html.dark body {
+  background: #030712;
+  color: #f9fafb;
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+}
+
+html.dark .bg-neutral-50 {
+  background-color: #030712 !important;
+}
+
+html.dark .bg-neutral-100 {
+  background-color: #1f2937 !important;
+}
+
+html.dark .bg-primary-50 {
+  background-color: #172554 !important;
+}
+
+html.dark .bg-primary-100 {
+  background-color: #1e3a8a !important;
+}
+
+html.dark .bg-accent-50 {
+  background-color: #431407 !important;
+}
+
+html.dark .bg-accent-100 {
+  background-color: #7c2d12 !important;
+}
+
+html.dark .bg-success-50 {
+  background-color: #052e16 !important;
+}
+
+html.dark .bg-warning-50 {
+  background-color: #451a03 !important;
+}
+
+html.dark .bg-error-50 {
+  background-color: #450a0a !important;
+}
+
+html.dark .border-neutral-100,
+html.dark .border-neutral-200,
+html.dark .border-neutral-300 {
+  border-color: #374151 !important;
+}
+
+html.dark .text-neutral-950,
+html.dark .text-neutral-900,
+html.dark .text-neutral-800 {
+  color: #f9fafb !important;
+}
+
+html.dark .text-neutral-700,
+html.dark .text-neutral-600 {
+  color: #d1d5db !important;
+}
+
+html.dark .text-neutral-500 {
+  color: #9ca3af !important;
+}
+
+html.dark .text-primary-700,
+html.dark .text-primary-600 {
+  color: #93c5fd !important;
+}
+
+html.dark .text-accent-700,
+html.dark .text-accent-600 {
+  color: #fdba74 !important;
+}
+
+html.dark .text-success-700,
+html.dark .text-success-600 {
+  color: #86efac !important;
+}
+
+html.dark .text-warning-800,
+html.dark .text-warning-700,
+html.dark .text-warning-600 {
+  color: #fcd34d !important;
+}
+
+html.dark .text-error-800,
+html.dark .text-error-700,
+html.dark .text-error-600 {
+  color: #fca5a5 !important;
+}
+
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #111827;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #9ca3af;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.28) !important;
 }
 
 /* Animation for blob */

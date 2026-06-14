@@ -12,42 +12,57 @@ datasource db {
 // ---------------------------------------------------------
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique // TenVaiTro
-  users       User[]
+  id    String @id @default(uuid())
+  name  String @unique // TenVaiTro
+  users User[]
 }
 
 model User {
-  id               String   @id @default(uuid())
-  username         String   @unique // TenNguoiDung
-  gender           String?  // Gioi_tinh
-  dob              DateTime? // Ngaythangnamsinh
-  avatarUrl        String?  // Anh_dai_dien
-  email            String   @unique // Email
-  passwordHash     String   // Matkhau
-  status           String   @default("ACTIVE") // Trangthai
-  phone            String?  // SDT
-  
+  id           String    @id @default(uuid())
+  username     String    @unique // TenNguoiDung
+  gender       String? // Gioi_tinh
+  dob          DateTime? // Ngaythangnamsinh
+  avatarUrl    String? // Anh_dai_dien
+  email        String    @unique // Email
+  passwordHash String // Matkhau
+  status       String    @default("ACTIVE") // Trangthai
+  phone        String? // SDT
+
   // Gamification: Streak & Daily Check-in
-  xp               Int      @default(0) // Điểm kinh nghiệm
-  level            Int      @default(1) // Cấp độ hiện tại
-  lastLoginDate    DateTime? // Thời điểm cuối cùng user mở app
-  streakCount      Int      @default(0) // Chuỗi ngày đăng nhập liên tiếp
-  longestStreak    Int      @default(0) // Kỷ lục chuỗi ngày dài nhất
-  totalCheckIns    Int      @default(0) // Tổng số ngày đã điểm danh
-  lastCheckInDate  DateTime? // Ngày điểm danh cuối cùng (để tránh check-in 2 lần/ngày)
-  
-  roleId           String
-  role             Role     @relation(fields: [roleId], references: [id])
-  
+  xp              Int       @default(0) // Điểm kinh nghiệm
+  level           Int       @default(1) // Cấp độ hiện tại
+  lastLoginDate   DateTime? // Thời điểm cuối cùng user mở app
+  streakCount     Int       @default(0) // Chuỗi ngày đăng nhập liên tiếp
+  longestStreak   Int       @default(0) // Kỷ lục chuỗi ngày dài nhất
+  totalCheckIns   Int       @default(0) // Tổng số ngày đã điểm danh
+  lastCheckInDate DateTime? // Ngày điểm danh cuối cùng (để tránh check-in 2 lần/ngày)
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
   progresses       Progress[]
   exerciseAttempts ExerciseAttempt[]
   dailyActivities  DailyActivity[]
+  passwordResetTokens PasswordResetToken[]
   userBadges       UserBadge[]
   leaderboards     Leaderboard[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ---------------------------------------------------------
@@ -55,13 +70,13 @@ model User {
 // ---------------------------------------------------------
 
 model LearningMap {
-  id          String   @id @default(uuid())
-  name        String   // TenBanDo
-  requirement String?  // YeuCauBanDo
-  status      String   @default("ACTIVE") // TrangThaiBanDo
-  
-  exercises   Exercise[]
-  progresses  Progress[]
+  id          String  @id @default(uuid())
+  name        String // TenBanDo
+  requirement String? // YeuCauBanDo
+  status      String  @default("ACTIVE") // TrangThaiBanDo
+
+  exercises  Exercise[]
+  progresses Progress[]
 }
 
 model Leaderboard {
@@ -71,8 +86,8 @@ model Leaderboard {
   score              Int      @default(0) // DiemSo
   correctAnswers     Int      @default(0) // SoCauDung
   completedExercises Int      @default(0) // SoBaiLam
-  type               String   // LoaiKy: 'tuan' hoặc 'thang'
-  period             String   // KyXepHang: vd "2026-W22" hoặc "2026-06"
+  type               String // LoaiKy: 'tuan' hoặc 'thang'
+  period             String // KyXepHang: vd "2026-W22" hoặc "2026-06"
   updatedAt          DateTime @updatedAt // ThoiGianCapNhat
 
   @@unique([userId, type, period])
@@ -80,17 +95,17 @@ model Leaderboard {
 }
 
 model Progress {
-  id            String   @id @default(uuid())
-  
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  mapId         String
-  map           LearningMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  
-  position      Int      @default(0) // Vi_tri
-  result        String?  // KQ_man
-  
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mapId String
+  map   LearningMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  position Int     @default(0) // Vi_tri
+  result   String? // KQ_man
+
   @@unique([userId, mapId])
 }
 
@@ -99,50 +114,52 @@ model Progress {
 // ---------------------------------------------------------
 
 model Topic {
-  id          String   @id @default(uuid())
-  name        String   // TenCD
-  description String?  // MoTa
-  
+  id          String  @id @default(uuid())
+  name        String // TenCD
+  description String? // MoTa
+
   exercises   Exercise[]
+  soundGroups SoundGroup[]
 }
 
 model Level {
-  id          String   @id @default(uuid())
-  name        String   // TenCD (Cấp độ)
-  description String?  // MoTaCDN
-  
+  id          String  @id @default(uuid())
+  name        String // TenCD (Cấp độ)
+  description String? // MoTaCDN
+
   exercises   Exercise[]
+  soundGroups SoundGroup[]
 }
 
 model AudioFile {
-  id          String   @id @default(uuid())
-  path        String   // DuongDanAmThanh
-  duration    Int?     // ThoiGianTep (seconds)
-  playLimit   Int?     // GioiHanPhat
-  
-  exercises   Exercise[] @relation("ExerciseAudios")
+  id        String @id @default(uuid())
+  path      String // DuongDanAmThanh
+  duration  Int? // ThoiGianTep (seconds)
+  playLimit Int? // GioiHanPhat
+
+  exercises Exercise[] @relation("ExerciseAudios")
 }
 
 model Exercise {
-  id            String   @id @default(uuid())
-  name          String   // TenBai
-  questionCount Int      @default(0) // SoCauHoi
-  timeLimit     Int?     // TGLamBai (seconds)
-  status        String   @default("ACTIVE") // TrangThaiBai
-  description   String?  // MoTaBT
-  
-  topicId       String
-  topic         Topic    @relation(fields: [topicId], references: [id])
-  
-  levelId       String
-  level         Level    @relation(fields: [levelId], references: [id])
-  
-  mapId         String
-  map           LearningMap @relation(fields: [mapId], references: [id])
-  
-  questions     Question[]
-  attempts      ExerciseAttempt[]
-  audios        AudioFile[] @relation("ExerciseAudios") // Quan hệ n-n qua "Dung"
+  id            String  @id @default(uuid())
+  name          String // TenBai
+  questionCount Int     @default(0) // SoCauHoi
+  timeLimit     Int? // TGLamBai (seconds)
+  status        String  @default("ACTIVE") // TrangThaiBai
+  description   String? // MoTaBT
+
+  topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id])
+
+  levelId String
+  level   Level  @relation(fields: [levelId], references: [id])
+
+  mapId String
+  map   LearningMap @relation(fields: [mapId], references: [id])
+
+  questions Question[]
+  attempts  ExerciseAttempt[]
+  audios    AudioFile[]       @relation("ExerciseAudios") // Quan hệ n-n qua "Dung"
 }
 
 // ---------------------------------------------------------
@@ -150,76 +167,250 @@ model Exercise {
 // ---------------------------------------------------------
 
 model QuestionType {
-  id          String   @id @default(uuid())
-  name        String   // Ten_Loai
-  description String?  // MoTaLoai
-  
-  questions   Question[]
+  id          String  @id @default(uuid())
+  name        String // Ten_Loai
+  description String? // MoTaLoai
+
+  questions         Question[]
+  questionBankItems QuestionBankItem[]
 }
 
 model Question {
-  id          String   @id @default(uuid())
-  name        String?  // TenCauHoi
-  content     String   // Noi dung cau hoi
-  status      String   @default("ACTIVE") // TrangThaiCauhoi
-  score       Int      @default(10) // điểm
-  answer      String   // đáp án
-  
-  typeId      String
-  type        QuestionType @relation(fields: [typeId], references: [id])
-  
-  exerciseId  String
-  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  
-  options           AnswerOption[]
-  questionAttempts  QuestionAttempt[]
+  id      String  @id @default(uuid())
+  name    String? // TenCauHoi
+  content String // Noi dung cau hoi
+  status  String  @default("ACTIVE") // TrangThaiCauhoi
+  score   Int     @default(10) // điểm
+  answer  String // đáp án
+
+  typeId String
+  type   QuestionType @relation(fields: [typeId], references: [id])
+
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  options          AnswerOption[]
+  questionAttempts QuestionAttempt[]
 }
 
 model AnswerOption {
-  id          String   @id @default(uuid())
-  content     String   // NoiDungPA
-  
-  questionId  String
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  content String // NoiDungPA
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 // ---------------------------------------------------------
 // CHI TIẾT LÀM BÀI (CHITIETLAMBAI)
 // ---------------------------------------------------------
 
-model ExerciseAttempt {
+model Phoneme {
   id            String   @id @default(uuid())
-  name          String?  // TenCTLB
-  status        String   @default("COMPLETED") // Trangthai
-  attemptCount  Int      @default(1) // So_lan_lam
-  score         Int      @default(0) // Điểm đạt được (%)
-  
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  exerciseId    String
-  exercise      Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  
-  createdAt        DateTime @default(now())
+  symbol        String   @unique // IPA symbol, vi du /i:/, /ɪ/, /æ/
+  name          String
+  category      String // VOWEL, DIPHTHONG, CONSONANT
+  description   String?
+  mouthHint     String?
+  commonMistake String?
+  status        String   @default("ACTIVE") // ACTIVE, DRAFT, NEEDS_REVIEW, ARCHIVED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  soundGroups SoundGroupPhoneme[]
+  wordItems   WordItem[]
+
+  @@index([category, status])
+}
+
+model SoundGroup {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  orderIndex  Int      @default(0)
+  status      String   @default("DRAFT") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topicId String?
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  levelId String?
+  level   Level?  @relation(fields: [levelId], references: [id], onDelete: SetNull)
+
+  phonemes          SoundGroupPhoneme[]
+  minimalPairs      MinimalPair[]
+  sentenceItems     SentenceItem[]
+  questionBankItems QuestionBankItem[]
+
+  @@index([topicId])
+  @@index([levelId])
+  @@index([status, orderIndex])
+}
+
+model SoundGroupPhoneme {
+  soundGroupId String
+  phonemeId    String
+  role         String? // target, contrast, primary, secondary
+  orderIndex   Int     @default(0)
+
+  soundGroup SoundGroup @relation(fields: [soundGroupId], references: [id], onDelete: Cascade)
+  phoneme    Phoneme    @relation(fields: [phonemeId], references: [id], onDelete: Cascade)
+
+  @@id([soundGroupId, phonemeId])
+  @@index([phonemeId])
+  @@index([soundGroupId, orderIndex])
+}
+
+model WordItem {
+  id          String    @id @default(uuid())
+  word        String
+  ipa         String
+  audioUrl    String?
+  audioSource String    @default("MANUAL") // LOCAL, FREE_DICTIONARY, MANUAL, LICENSED
+  sourceType  String    @default("MANUAL") // MANUAL, OPEN_SOURCE, FREE_API, LICENSED
+  sourceUrl   String?
+  meaningVi   String?
+  difficulty  String    @default("EASY") // EASY, MEDIUM, HARD
+  status      String    @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  reviewNote  String?
+  createdBy   String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  phonemeId String
+  phoneme   Phoneme @relation(fields: [phonemeId], references: [id], onDelete: Restrict)
+
+  minimalPairAsWordA MinimalPair[]      @relation("MinimalPairWordA")
+  minimalPairAsWordB MinimalPair[]      @relation("MinimalPairWordB")
+  questionBankItems  QuestionBankItem[]
+
+  @@unique([word, ipa, phonemeId])
+  @@index([phonemeId])
+  @@index([status, difficulty])
+  @@index([audioSource])
+}
+
+model MinimalPair {
+  id         String   @id @default(uuid())
+  note       String?
+  difficulty String   @default("EASY") // EASY, MEDIUM, HARD
+  status     String   @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  soundGroupId String
+  soundGroup   SoundGroup @relation(fields: [soundGroupId], references: [id], onDelete: Cascade)
+
+  wordAId String
+  wordA   WordItem @relation("MinimalPairWordA", fields: [wordAId], references: [id], onDelete: Restrict)
+
+  wordBId String
+  wordB   WordItem @relation("MinimalPairWordB", fields: [wordBId], references: [id], onDelete: Restrict)
+
+  questionBankItems QuestionBankItem[]
+
+  @@unique([soundGroupId, wordAId, wordBId])
+  @@index([soundGroupId])
+  @@index([status, difficulty])
+  @@index([wordAId])
+  @@index([wordBId])
+}
+
+model SentenceItem {
+  id          String   @id @default(uuid())
+  text        String
+  targetWords Json?
+  difficulty  String   @default("EASY") // EASY, MEDIUM, HARD
+  status      String   @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  sourceType  String   @default("MANUAL") // MANUAL, OPEN_SOURCE, FREE_API, LICENSED
+  sourceUrl   String?
+  reviewNote  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  soundGroupId String
+  soundGroup   SoundGroup @relation(fields: [soundGroupId], references: [id], onDelete: Cascade)
+
+  questionBankItems QuestionBankItem[]
+
+  @@index([soundGroupId])
+  @@index([status, difficulty])
+  @@index([sourceType])
+}
+
+model QuestionBankItem {
+  id          String   @id @default(uuid())
+  prompt      String?
+  contentJson Json
+  answer      String
+  score       Int      @default(10)
+  difficulty  String   @default("EASY") // EASY, MEDIUM, HARD
+  status      String   @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  sourceType  String   @default("MANUAL") // MANUAL, OPEN_SOURCE, FREE_API, LICENSED
+  sourceUrl   String?
+  reviewNote  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questionTypeId String
+  questionType   QuestionType @relation(fields: [questionTypeId], references: [id], onDelete: Restrict)
+
+  soundGroupId String?
+  soundGroup   SoundGroup? @relation(fields: [soundGroupId], references: [id], onDelete: SetNull)
+
+  minimalPairId String?
+  minimalPair   MinimalPair? @relation(fields: [minimalPairId], references: [id], onDelete: SetNull)
+
+  wordItemId String?
+  wordItem   WordItem? @relation(fields: [wordItemId], references: [id], onDelete: SetNull)
+
+  sentenceItemId String?
+  sentenceItem   SentenceItem? @relation(fields: [sentenceItemId], references: [id], onDelete: SetNull)
+
+  @@index([questionTypeId])
+  @@index([soundGroupId])
+  @@index([minimalPairId])
+  @@index([wordItemId])
+  @@index([sentenceItemId])
+  @@index([status, difficulty])
+  @@index([sourceType])
+}
+
+model ExerciseAttempt {
+  id           String  @id @default(uuid())
+  name         String? // TenCTLB
+  status       String  @default("COMPLETED") // Trangthai
+  attemptCount Int     @default(1) // So_lan_lam
+  score        Int     @default(0) // Điểm đạt được (%)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime          @default(now())
   questionAttempts QuestionAttempt[]
 }
 
 model QuestionAttempt {
-  id                String   @id @default(uuid())
+  id                String          @id @default(uuid())
   exerciseAttemptId String
   exerciseAttempt   ExerciseAttempt @relation(fields: [exerciseAttemptId], references: [id], onDelete: Cascade)
   questionId        String
-  question          Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  transcript        String?  // Nội dung thu âm của người dùng
-  selectedOptionId  String?  // Phương án người dùng chọn, nếu là câu trắc nghiệm
-  isCorrect         Boolean  @default(false)
-  score             Int      @default(0) // Điểm đạt được ở câu hỏi này
-  accuracyScore     Int?     // Độ chính xác phát âm (%)
-  fluencyScore      Int?     // Độ trôi chảy phát âm (%)
-  feedback          String?  // Phản hồi chi tiết cho người học
-  audioUrl          String?  // Đường dẫn file ghi âm của người học, nếu có lưu
-  timeSpent         Int?     // Thời gian làm câu hỏi (giây)
-  createdAt         DateTime @default(now())
+  question          Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  transcript        String? // Nội dung thu âm của người dùng
+  selectedOptionId  String? // Phương án người dùng chọn, nếu là câu trắc nghiệm
+  isCorrect         Boolean         @default(false)
+  score             Int             @default(0) // Điểm đạt được ở câu hỏi này
+  accuracyScore     Int? // Độ chính xác phát âm (%)
+  fluencyScore      Int? // Độ trôi chảy phát âm (%)
+  feedback          String? // Phản hồi chi tiết cho người học
+  audioUrl          String? // Đường dẫn file ghi âm của người học, nếu có lưu
+  timeSpent         Int? // Thời gian làm câu hỏi (giây)
+  createdAt         DateTime        @default(now())
 }
 
 // ---------------------------------------------------------
@@ -246,14 +437,14 @@ model DailyActivity {
 // ---------------------------------------------------------
 
 model Badge {
-  id          String   @id @default(uuid())
-  name        String   // TenHuyHieu
-  description String?  // MoTaHH
-  image       String?  // HinhAnhHH
-  condition   String?  // DieuKienDat
-  type        String   // LoaiHuyHieu (Vĩnh viễn / Tạm thời)
-  
-  userBadges  UserBadge[]
+  id          String  @id @default(uuid())
+  name        String // TenHuyHieu
+  description String? // MoTaHH
+  image       String? // HinhAnhHH
+  condition   String? // DieuKienDat
+  type        String // LoaiHuyHieu (Vĩnh viễn / Tạm thời)
+
+  userBadges UserBadge[]
 }
 
 model UserBadge {
@@ -261,10 +452,10 @@ model UserBadge {
   userId      String
   badgeId     String
   earnedAt    DateTime @default(now()) // thời gian
-  validPeriod String?  // KyHieuLuc: vd "2026-W22", null nếu là huy hiệu vĩnh viễn
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge       Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  validPeriod String? // KyHieuLuc: vd "2026-W22", null nếu là huy hiệu vĩnh viễn
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
 }

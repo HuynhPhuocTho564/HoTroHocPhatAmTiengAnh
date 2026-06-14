@@ -1,66 +1,61 @@
-import React from "react";
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password";
+
+  if (isAuthPage) {
+    return null;
+  }
+
   return (
-    <footer className="bg-white border-t border-neutral-200 mt-auto">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* About */}
+    <footer className="mt-auto border-t border-neutral-200 bg-white" role="contentinfo">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           <div>
-            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-4">
-              Về chúng tôi
-            </h3>
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-neutral-900">Về chúng tôi</h2>
             <p className="text-sm text-neutral-600">
-              Web hỗ trợ phát âm tiếng Anh cho người Việt, sử dụng công nghệ AI và gamification.
+              Web hỗ trợ phát âm tiếng Anh cho người Việt, sử dụng AI và gamification.
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-4">
-              Liên kết
-            </h3>
+          <nav aria-label="Liên kết footer">
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-neutral-900">Liên kết</h2>
             <ul className="space-y-2">
               <li>
-                <Link href="/practice" className="text-sm text-neutral-600 hover:text-primary-600 transition-colors">
+                <Link href="/practice" className="text-sm text-neutral-600 transition-colors hover:text-primary-700">
                   Luyện tập
                 </Link>
               </li>
               <li>
-                <Link href="/learning_map" className="text-sm text-neutral-600 hover:text-primary-600 transition-colors">
-                  Bản đồ học tập
+                <Link href="/learning_map" className="text-sm text-neutral-600 transition-colors hover:text-primary-700">
+                  Lộ trình học tập
                 </Link>
               </li>
               <li>
-                <Link href="/leaderboard" className="text-sm text-neutral-600 hover:text-primary-600 transition-colors">
+                <Link href="/leaderboard" className="text-sm text-neutral-600 transition-colors hover:text-primary-700">
                   Bảng xếp hạng
                 </Link>
               </li>
               <li>
-                <Link href="/badges" className="text-sm text-neutral-600 hover:text-primary-600 transition-colors">
+                <Link href="/badges" className="text-sm text-neutral-600 transition-colors hover:text-primary-700">
                   Huy hiệu
                 </Link>
               </li>
             </ul>
-          </div>
+          </nav>
 
-          {/* Contact */}
           <div>
-            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-4">
-              Liên hệ
-            </h3>
-            <p className="text-sm text-neutral-600">
-              Email: support@phatamen.edu.vn
-            </p>
-            <p className="text-sm text-neutral-600 mt-2">
-              Đồ án tốt nghiệp 2026
-            </p>
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-neutral-900">Liên hệ</h2>
+            <p className="text-sm text-neutral-600">Email: support@phatamen.edu.vn</p>
+            <p className="mt-2 text-sm text-neutral-600">Đồ án tốt nghiệp 2026</p>
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-neutral-200">
+        <div className="mt-8 border-t border-neutral-200 pt-8">
           <p className="text-center text-sm text-neutral-500">
             © 2026 Web_HoTroPhatAmEN. Tuân thủ WCAG 2.1 AA.
           </p>

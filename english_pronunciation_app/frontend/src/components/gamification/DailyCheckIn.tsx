@@ -1,164 +1,233 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Card from "@/components/ui/Card";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
-import DailyRewardsPopup from "./DailyRewardsPopup";
+import Card from "@/components/ui/Card";
 
-type DailyCheckInProps = {
-  userId?: string; // User ID để gọi API
-  currentStreak?: number;
-  longestStreak?: number;
-  lastCheckIn?: string;
-  onCheckIn?: () => void;
+type CheckInStatus = {
+  currentStreak: number;
+  longestStreak: number;
+  totalCheckIns: number;
+  lastCheckInDate: string | null;
+  canCheckIn: boolean;
+  todayReward: {
+    xp: number;
+    rankingScore: number;
+  };
 };
 
-/**
- * DailyCheckIn Component - Điểm danh tự động
- * 
- * Logic mới:
- * - Tự động ghi nhận khi user hoàn thành ít nhất 1 bài tập/ngày
- * - Hiển thị popup rương quà khi mở app lần đầu trong ngày
- * - Streak tăng tự động, không cần bấm nút
- */
-export default function DailyCheckIn({
-  userId = "mock-user-id",
-  currentStreak = 3,
-  longestStreak = 15,
-  lastCheckIn,
-  onCheckIn,
-}: DailyCheckInProps) {
-  const [showPopup, setShowPopup] = useState(false);
-  const [streak, setStreak] = useState(currentStreak);
-  const [longest, setLongest] = useState(longestStreak);
-  const [canClaim, setCanClaim] = useState(false);
+type DailyCheckInProps = {
+  currentStreak?: number;
+  longestStreak?: number;
+  totalCheckIns?: number;
+  lastCheckIn?: string | null;
+  canCheckIn?: boolean;
+  onCheckIn?: (status: CheckInStatus) => void;
+  onStatusLoaded?: (status: CheckInStatus) => void;
+};
 
-  // Kiểm tra có thể claim reward không khi component mount
-  useEffect(() => {
-    checkCanClaim();
-  }, []);
-
-  const checkCanClaim = async () => {
-    try {
-      const response = await fetch(`/api/checkin?userId=${userId}`);
-      const data = await response.json();
-      
-      if (data.canCheckIn) {
-        setCanClaim(true);
-        // Tự động hiển thị popup nếu chưa claim hôm nay
-        setShowPopup(true);
-      }
-    } catch (error) {
-      console.error("Error checking claim status:", error);
+type ApiResponse<T> =
+  | {
+      success: true;
+      data: T;
     }
-  };
+  | {
+      success: false;
+      error?: {
+        code: string;
+        message: string;
+      };
+      data?: Partial<CheckInStatus>;
+    };
 
-  const handleClaimReward = async (day: number) => {
+const DEFAULT_REWARD = {
+  xp: 10,
+  rankingScore: 2,
+};
+
+export default function DailyCheckIn({
+  currentStreak = 0,
+  longestStreak = 0,
+  totalCheckIns = 0,
+  lastCheckIn = null,
+  canCheckIn,
+  onCheckIn,
+  onStatusLoaded,
+}: DailyCheckInProps) {
+  const [status, setStatus] = useState<CheckInStatus>({
+    currentStreak,
+    longestStreak,
+    totalCheckIns,
+    lastCheckInDate: lastCheckIn,
+    canCheckIn: canCheckIn ?? false,
+    todayReward: DEFAULT_REWARD,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStatus() {
+      setIsLoading(true);
+      setMessage(null);
+
+      try {
+        const response = await fetch("/api/checkin");
+        const body = (await response.json()) as ApiResponse<CheckInStatus>;
+
+        if (!cancelled && body.success) {
+          setStatus(body.data);
+          onStatusLoaded?.(body.data);
+        }
+
+        if (!cancelled && !body.success) {
+          setMessage(body.error?.message ?? "Không lấy được trạng thái điểm danh.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMessage("Không thể kết nối API điểm danh.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [onStatusLoaded]);
+
+  async function handleCheckIn() {
+    setIsSubmitting(true);
+    setMessage(null);
+
     try {
       const response = await fetch("/api/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({}),
       });
+      const body = (await response.json()) as ApiResponse<
+        CheckInStatus & {
+          reward: {
+            xp: number;
+            rankingScore: number;
+          };
+          badgesAwarded: Array<{
+            id: string;
+            name: string;
+            type: string;
+          }>;
+        }
+      >;
 
-      const data = await response.json();
+      if (body.success) {
+        const nextStatus: CheckInStatus = {
+          currentStreak: body.data.currentStreak,
+          longestStreak: body.data.longestStreak,
+          totalCheckIns: body.data.totalCheckIns,
+          lastCheckInDate: body.data.lastCheckInDate,
+          canCheckIn: false,
+          todayReward: body.data.reward,
+        };
 
-      if (data.success) {
-        setStreak(data.currentStreak);
-        setLongest(data.longestStreak);
-        setCanClaim(false);
-        
-        if (onCheckIn) {
-          onCheckIn();
+        setStatus(nextStatus);
+        setMessage(
+          body.data.badgesAwarded.length > 0
+            ? `Đã điểm danh và nhận ${body.data.badgesAwarded.length} huy hiệu mới.`
+            : "Đã điểm danh thành công.",
+        );
+        onCheckIn?.(nextStatus);
+      } else {
+        setMessage(body.error?.message ?? "Điểm danh không thành công.");
+        if (body.error?.code === "ALREADY_CHECKED_IN") {
+          setStatus((current) => ({
+            ...current,
+            canCheckIn: false,
+          }));
         }
       }
     } catch (error) {
-      console.error("Error claiming reward:", error);
+      setMessage("Không thể kết nối API điểm danh.");
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }
 
-  // Tạo lịch 7 ngày
-  const weekDays = Array.from({ length: 7 }, (_, i) => ({
-    day: i + 1,
-    checked: streak >= i + 1,
+  const cycleDay = status.currentStreak === 0 ? 1 : ((status.currentStreak - 1) % 7) + 1;
+  const weekDays = Array.from({ length: 7 }, (_, index) => ({
+    day: index + 1,
+    checked: cycleDay >= index + 1 && status.currentStreak > 0,
   }));
 
   return (
-    <>
-      <Card className="bg-gradient-to-br from-primary-50 to-accent-50 border-primary-200">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-              <span className="text-2xl">🔥</span>
-              Chuỗi Ngày Học
-            </h3>
-            <p className="text-sm text-neutral-600 mt-1">
-              Hoàn thành bài tập mỗi ngày để tăng streak
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setShowPopup(true)}
-            className={canClaim ? "animate-pulse" : ""}
-            aria-label="Nhận quà hàng ngày"
-          >
-            {canClaim ? "🎁 Nhận quà" : "✅ Đã nhận"}
-          </Button>
-        </div>
-
-        {/* Streak Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-lg p-4 border border-primary-200">
-            <div className="text-3xl font-bold text-primary-600 flex items-center gap-2">
-              🔥 {streak}
-            </div>
-            <div className="text-sm text-neutral-600 mt-1">Chuỗi hiện tại</div>
-            <div className="text-xs text-neutral-500 mt-1">ngày liên tiếp</div>
-          </div>
-          <div className="bg-white rounded-lg p-4 border border-accent-200">
-            <div className="text-3xl font-bold text-accent-600 flex items-center gap-2">
-              🏆 {longest}
-            </div>
-            <div className="text-sm text-neutral-600 mt-1">Kỷ lục cá nhân</div>
-            <div className="text-xs text-neutral-500 mt-1">ngày liên tiếp</div>
-          </div>
-        </div>
-
-        {/* Mini Calendar */}
-        <div className="mt-4 flex gap-2 justify-center">
-          {weekDays.map((day) => (
-            <div
-              key={day.day}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-all ${
-                day.checked
-                  ? "bg-success-500 text-white shadow-md"
-                  : "bg-white text-neutral-400 border border-neutral-200"
-              }`}
-              aria-label={`Ngày ${day.day}: ${day.checked ? "Đã hoàn thành" : "Chưa hoàn thành"}`}
-            >
-              {day.checked ? "✓" : day.day}
-            </div>
-          ))}
-        </div>
-
-        {/* Info */}
-        <div className="mt-4 bg-white rounded-lg p-3 border border-primary-200">
-          <p className="text-xs text-neutral-600 text-center">
-            💡 Hoàn thành ít nhất 1 bài tập mỗi ngày để duy trì streak
+    <Card className="border-primary-200 bg-primary-50">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-neutral-900">Chuỗi ngày học</h3>
+          <p className="mt-1 text-sm text-neutral-600">
+            Điểm danh mỗi ngày để nhận +{status.todayReward.xp} XP và +{status.todayReward.rankingScore} điểm hạng.
           </p>
         </div>
-      </Card>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleCheckIn}
+          loading={isSubmitting}
+          disabled={isLoading || !status.canCheckIn}
+          aria-label="Điểm danh hằng ngày"
+        >
+          {status.canCheckIn ? "Điểm danh" : "Đã điểm danh"}
+        </Button>
+      </div>
 
-      {/* Daily Rewards Popup */}
-      {showPopup && (
-        <DailyRewardsPopup
-          currentStreak={streak}
-          onClaim={handleClaimReward}
-          onClose={() => setShowPopup(false)}
-        />
+      <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-primary-200 bg-white p-4">
+          <dt className="text-sm text-neutral-600">Chuỗi hiện tại</dt>
+          <dd className="mt-1 text-3xl font-bold text-primary-600">{status.currentStreak}</dd>
+          <div className="mt-1 text-xs text-neutral-500">ngày liên tiếp</div>
+        </div>
+        <div className="rounded-lg border border-accent-200 bg-white p-4">
+          <dt className="text-sm text-neutral-600">Kỷ lục cá nhân</dt>
+          <dd className="mt-1 text-3xl font-bold text-accent-600">{status.longestStreak}</dd>
+          <div className="mt-1 text-xs text-neutral-500">ngày liên tiếp</div>
+        </div>
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <dt className="text-sm text-neutral-600">Tổng điểm danh</dt>
+          <dd className="mt-1 text-3xl font-bold text-neutral-900">{status.totalCheckIns}</dd>
+          <div className="mt-1 text-xs text-neutral-500">ngày đã ghi nhận</div>
+        </div>
+      </dl>
+
+      <ul className="mt-5 flex justify-center gap-2" aria-label="Tiến độ chu kỳ 7 ngày">
+        {weekDays.map((day) => (
+          <li
+            key={day.day}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold transition-all ${
+              day.checked ? "bg-success-600 text-white shadow-sm" : "border border-neutral-200 bg-white text-neutral-500"
+            }`}
+            aria-label={`Ngày ${day.day}: ${day.checked ? "Đã hoàn thành" : "Chưa hoàn thành"}`}
+          >
+            {day.checked ? "OK" : day.day}
+          </li>
+        ))}
+      </ul>
+
+      {message && (
+        <div
+          className="mt-4 rounded-lg border border-primary-200 bg-white p-3 text-sm text-neutral-700"
+          role="status"
+          aria-live="polite"
+        >
+          {message}
+        </div>
       )}
-    </>
+    </Card>
   );
 }

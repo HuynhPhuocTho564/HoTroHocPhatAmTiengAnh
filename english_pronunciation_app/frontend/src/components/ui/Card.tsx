@@ -28,7 +28,7 @@ export default function Card({
   const hoverStyle = hover ? "hover:shadow-md transition-shadow duration-200" : "";
   
   return (
-    <div className={`bg-white rounded-xl border border-neutral-200 shadow-sm ${paddingStyles[padding]} ${hoverStyle} ${className}`}>
+    <div className={`rounded-xl border border-neutral-200 bg-white shadow-sm transition-colors dark:border-neutral-800 dark:bg-neutral-900 ${paddingStyles[padding]} ${hoverStyle} ${className}`}>
       {children}
     </div>
   );

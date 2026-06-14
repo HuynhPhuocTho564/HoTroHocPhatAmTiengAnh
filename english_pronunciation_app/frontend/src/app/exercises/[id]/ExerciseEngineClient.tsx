@@ -1,116 +1,336 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
-import ProgressBar from '@/components/ui/ProgressBar';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import ProgressBar from "@/components/ui/ProgressBar";
 
-// Component con để render câu hỏi loại Nghe & Chọn (Luyện Tai)
-function ListenChooseQuestion({ 
-  question, 
-  onAnswer,
-  isAnswered,
-  selectedAnswer
-}: { 
-  question: any, 
-  onAnswer: (isCorrect: boolean, selectedOpt: string) => void,
-  isAnswered: boolean,
-  selectedAnswer: string | null
+type ExerciseQuestionOption = {
+  id: string;
+  content: string;
+};
+
+type ExerciseQuestion = {
+  id: string;
+  name: string | null;
+  content: string;
+  type: string;
+  answer: string;
+  score: number;
+  options: ExerciseQuestionOption[];
+};
+
+type ExerciseData = {
+  id: string;
+  name: string;
+  description: string | null;
+  questions: ExerciseQuestion[];
+};
+
+type WordPrompt = {
+  word: string;
+  ipa?: string;
+  audioUrl?: string;
+  hint?: string;
+  options?: Array<{
+    id?: string;
+    text?: string;
+    content?: string;
+  }>;
+};
+
+type SubmitAnswer = {
+  questionId: string;
+  selectedOptionId?: string | null;
+  selectedText?: string | null;
+  transcript?: string | null;
+  audioUrl?: string | null;
+  timeSpent?: number | null;
+};
+
+type SubmitResult = {
+  exerciseAttemptId: string;
+  exerciseScore: number;
+  isCompleted: boolean;
+  rating: string;
+  rewards: {
+    totalXpEarned: number;
+    totalRankingDelta: number;
+    dailyBonusXp: number;
+    dailyBonusRanking: number;
+    retakeXp: number;
+    retakeRanking: number;
+  };
+  progress: {
+    currentXp: number;
+    level: number;
+    nextLevelXp: number;
+  };
+};
+
+type IncorrectQuestion = {
+  question: ExerciseQuestion;
+  selected: string;
+  correct: string;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionResultEventLike = {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionErrorEventLike = {
+  error: string;
+};
+
+function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+
+  const speechWindow = window as Window &
+    typeof globalThis & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
+}
+
+function normalizeAnswer(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^\w\s]|_/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseWordPrompt(content: string): WordPrompt {
+  try {
+    const parsed = JSON.parse(content) as Partial<WordPrompt>;
+    return {
+      word: String(parsed.word ?? content),
+      ipa: parsed.ipa ? String(parsed.ipa) : undefined,
+      audioUrl: parsed.audioUrl ? String(parsed.audioUrl) : undefined,
+      hint: parsed.hint ? String(parsed.hint) : undefined,
+      options: Array.isArray(parsed.options) ? parsed.options : undefined,
+    };
+  } catch {
+    return {
+      word: content,
+      audioUrl: content.startsWith("/") || content.startsWith("http") ? content : undefined,
+    };
+  }
+}
+
+function parsePairPrompt(content: string): [WordPrompt, WordPrompt] {
+  try {
+    const parsed = JSON.parse(content) as Array<Partial<WordPrompt>>;
+    if (Array.isArray(parsed) && parsed.length >= 2) {
+      return [
+        {
+          word: String(parsed[0].word ?? "Word 1"),
+          ipa: parsed[0].ipa ? String(parsed[0].ipa) : undefined,
+          audioUrl: parsed[0].audioUrl ? String(parsed[0].audioUrl) : undefined,
+          hint: parsed[0].hint ? String(parsed[0].hint) : undefined,
+        },
+        {
+          word: String(parsed[1].word ?? "Word 2"),
+          ipa: parsed[1].ipa ? String(parsed[1].ipa) : undefined,
+          audioUrl: parsed[1].audioUrl ? String(parsed[1].audioUrl) : undefined,
+          hint: parsed[1].hint ? String(parsed[1].hint) : undefined,
+        },
+      ];
+    }
+  } catch {
+    // Plain text fallback below.
+  }
+
+  const words = content
+    .split(/[-,|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return [
+    { word: words[0] ?? "Word 1" },
+    { word: words[1] ?? "Word 2" },
+  ];
+}
+
+function formatQuestionWord(question: ExerciseQuestion) {
+  try {
+    const parsed = JSON.parse(question.content);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => item.word).filter(Boolean).join(" & ");
+    }
+    if (parsed?.word) return String(parsed.word);
+  } catch {
+    // Plain text fallback below.
+  }
+
+  return question.content;
+}
+
+function createRecognition(
+  onResult: (transcript: string) => void,
+  onError: () => void,
+): SpeechRecognitionLike | null {
+  const SpeechRecognition = getSpeechRecognitionConstructor();
+  if (!SpeechRecognition) return null;
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onresult = (event) => {
+    onResult(event.results[0][0].transcript);
+  };
+  recognition.onerror = (event) => {
+    console.error("Speech recognition error:", event.error);
+    onError();
+  };
+
+  return recognition;
+}
+
+function AudioButton({
+  audioUrl,
+  label = "Nghe mẫu",
+  dark = false,
+}: {
+  audioUrl?: string;
+  label?: string;
+  dark?: boolean;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Parse nội dung câu hỏi (chứa word, audioUrl, hint)
-  let contentData = { word: '', audioUrl: '', hint: '' };
-  try {
-    contentData = JSON.parse(question.content);
-  } catch (e) {
-    // Fallback nếu parse lỗi
-    contentData.audioUrl = question.content;
-  }
+  const playAudio = () => {
+    if (!audioUrl) return;
 
-  const handlePlayAudio = () => {
-    if (!contentData.audioUrl) return;
     if (!audioRef.current) {
-      audioRef.current = new Audio(contentData.audioUrl);
+      audioRef.current = new Audio(audioUrl);
       audioRef.current.onended = () => setIsPlaying(false);
     }
+
     setIsPlaying(true);
     const playPromise = audioRef.current.play();
     if (playPromise !== undefined) {
       playPromise.catch((error) => {
-        console.warn("Autoplay prevented by browser:", error);
+        console.warn("Audio playback failed:", error);
         setIsPlaying(false);
       });
     }
   };
 
-  // Tự động phát khi câu hỏi mới xuất hiện
+  return (
+    <button
+      type="button"
+      onClick={playAudio}
+      disabled={!audioUrl}
+      aria-label={label}
+      className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+        dark
+          ? "border-neutral-600 text-neutral-300 hover:border-white hover:text-white"
+          : "border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100"
+      } ${isPlaying ? "animate-pulse" : ""}`}
+    >
+      {isPlaying ? "Đang phát" : label}
+    </button>
+  );
+}
+
+function ListenChooseQuestion({
+  question,
+  onAnswer,
+  isAnswered,
+  selectedAnswer,
+}: {
+  question: ExerciseQuestion;
+  onAnswer: (isCorrect: boolean, selectedOpt: string, selectedOptionId?: string | null) => void;
+  isAnswered: boolean;
+  selectedAnswer: string | null;
+}) {
+  const contentData = useMemo(() => parseWordPrompt(question.content), [question.content]);
+  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : "...";
+  const parsedOptions =
+    contentData.options
+      ?.map((option, index) => ({
+        id: String(option.id ?? `${question.id}-json-option-${index}`),
+        content: String(option.text ?? option.content ?? ""),
+      }))
+      .filter((option) => option.content.length > 0) ?? [];
+  const options = question.options.length > 0 ? question.options : parsedOptions;
+
   useEffect(() => {
-    // Reset audio when question changes
-    audioRef.current = null;
-    
-    // Auto play
-    const timer = setTimeout(() => {
-      handlePlayAudio();
+    if (!contentData.audioUrl) return;
+
+    const timer = window.setTimeout(() => {
+      const audio = new Audio(contentData.audioUrl);
+      audio.play().catch((error) => console.warn("Autoplay prevented:", error));
     }, 500);
-    return () => clearTimeout(timer);
-  }, [question.id]);
 
-  const handleSelect = (optContent: string) => {
-    if (isAnswered) return; // Không cho chọn lại
-    const isCorrect = optContent === question.answer;
-    onAnswer(isCorrect, optContent);
-  };
-
-  // Capitalize first letter logic
-  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : '...';
+    return () => window.clearTimeout(timer);
+  }, [contentData.audioUrl, question.id]);
 
   return (
-    <div className="text-center space-y-10">
+    <div className="space-y-10 text-center">
       <div className="flex flex-col items-center gap-4">
-        <h2 className="text-6xl font-bold text-neutral-800">
-          {displayWord}
-        </h2>
-        <button
-          onClick={handlePlayAudio}
-          className={`flex items-center gap-2 px-6 py-3 rounded-full bg-primary-50 text-primary-600 font-semibold hover:bg-primary-100 transition-colors
-            ${isPlaying ? 'animate-pulse' : ''}`}
-        >
-          <span className="text-2xl">🔊</span>
-          {isPlaying ? 'Đang phát...' : 'Phát lại audio'}
-        </button>
+        <h2 className="text-5xl font-bold text-neutral-900 sm:text-6xl">{displayWord}</h2>
+        {contentData.ipa && <p className="font-ipa text-2xl text-neutral-500">{contentData.ipa}</p>}
+        <AudioButton audioUrl={contentData.audioUrl} label="Phát lại audio" />
       </div>
 
       <div>
-        <p className="text-xl font-medium text-neutral-500 mb-6">{question.name}</p>
-        <div className="flex justify-center gap-6">
-          {question.options.map((opt: any) => {
-            // Xác định màu sắc của nút
-            let btnClass = "border-neutral-200 bg-white text-neutral-700 hover:border-primary-300";
+        <p className="mb-6 text-lg font-medium text-neutral-600">{question.name || "Chọn đáp án đúng"}</p>
+        <div className="flex flex-wrap justify-center gap-4">
+          {options.map((option) => {
+            let buttonClass = "border-neutral-200 bg-white text-neutral-800 hover:border-primary-300";
             if (isAnswered) {
-              if (opt.content === question.answer) {
-                // Đáp án đúng luôn sáng xanh
-                btnClass = "border-success-500 bg-success-50 text-success-700 ring-4 ring-success-100";
-              } else if (opt.content === selectedAnswer) {
-                // Đáp án chọn sai bị đỏ
-                btnClass = "border-error-500 bg-error-50 text-error-700 opacity-50";
+              if (normalizeAnswer(option.content) === normalizeAnswer(question.answer)) {
+                buttonClass = "border-success-500 bg-success-50 text-success-700 ring-4 ring-success-100";
+              } else if (option.content === selectedAnswer) {
+                buttonClass = "border-error-500 bg-error-50 text-error-700";
               } else {
-                // Option còn lại bị mờ đi
-                btnClass = "border-neutral-200 bg-neutral-50 text-neutral-400 opacity-50";
+                buttonClass = "border-neutral-200 bg-neutral-50 text-neutral-400";
               }
             }
 
             return (
               <button
-                key={opt.id}
-                onClick={() => handleSelect(opt.content)}
+                key={option.id}
+                type="button"
+                onClick={() =>
+                  onAnswer(
+                    normalizeAnswer(option.content) === normalizeAnswer(question.answer),
+                    option.content,
+                    question.options.length > 0 ? option.id : null,
+                  )
+                }
                 disabled={isAnswered}
-                className={`w-32 h-20 text-3xl font-ipa rounded-2xl border-4 transition-all
-                  ${btnClass} ${!isAnswered ? 'hover:shadow-lg hover:-translate-y-1' : ''}`}
+                aria-pressed={selectedAnswer === option.content}
+                className={`h-20 min-w-32 rounded-xl border-4 px-6 font-ipa text-3xl font-bold transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 ${buttonClass}`}
               >
-                {opt.content}
+                {option.content}
               </button>
             );
           })}
@@ -120,547 +340,392 @@ function ListenChooseQuestion({
   );
 }
 
-// Component con để render câu hỏi dạng Thu Âm (Bài 2, 3, 4)
-function VoiceQuestion({ 
-  question, 
-  onNext
-}: { 
-  question: any, 
-  onNext: (isCorrect: boolean, selectedOpt: string) => void
+function VoiceQuestion({
+  question,
+  onNext,
+}: {
+  question: ExerciseQuestion;
+  onNext: (isCorrect: boolean, transcript: string) => void;
 }) {
-  const [status, setStatus] = useState<'idle' | 'recording' | 'processing' | 'correct' | 'incorrect' | 'error'>('idle');
-  const [transcript, setTranscript] = useState('');
+  const contentData = useMemo(() => parseWordPrompt(question.content), [question.content]);
+  const [status, setStatus] = useState<"idle" | "recording" | "processing" | "correct" | "incorrect" | "error">("idle");
+  const [transcript, setTranscript] = useState("");
   const [retryCount, setRetryCount] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const [speechUnsupported, setSpeechUnsupported] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  // Parse content
-  let contentData = { word: '', ipa: '', audioUrl: '', hint: '' };
-  try {
-    contentData = JSON.parse(question.content);
-  } catch (e) {
-    contentData.word = question.content;
-  }
-
-  // Capitalize first letter logic
-  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : '...';
-
-  // --- AUDIO LOGIC ---
-  const handlePlayAudio = () => {
-    if (!contentData.audioUrl) return;
-    if (!audioRef.current) {
-      audioRef.current = new Audio(contentData.audioUrl);
-      audioRef.current.onended = () => setIsPlaying(false);
-    }
-    setIsPlaying(true);
-    const playPromise = audioRef.current.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((e) => {
-        console.warn("Autoplay prevented:", e);
-        setIsPlaying(false);
-      });
-    }
-  };
-
-  // --- SPEECH RECOGNITION LOGIC ---
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.lang = 'en-US';
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.maxAlternatives = 1;
-
-      recognitionRef.current.onresult = (event: any) => {
-        const currentTranscript = event.results[0][0].transcript;
-        setTranscript(currentTranscript);
-        checkAnswer(currentTranscript);
-      };
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech API Error:", event.error);
-        if (event.error === 'no-speech' || event.error === 'network') {
-          setStatus('error');
-        }
-      };
-
-      recognitionRef.current.onend = () => {
-        setStatus((prev) => prev === 'recording' ? 'error' : prev);
-      };
-    } else {
-      console.error("Web Speech API not supported on this browser.");
-    }
+    setSpeechUnsupported(getSpeechRecognitionConstructor() === null);
+    setStatus("idle");
+    setTranscript("");
+    setRetryCount(0);
   }, [question.id]);
 
+  const checkAnswer = (recordedText: string) => {
+    setStatus("processing");
+
+    window.setTimeout(() => {
+      if (normalizeAnswer(recordedText) === normalizeAnswer(question.answer)) {
+        setStatus("correct");
+      } else {
+        setStatus("incorrect");
+        setRetryCount((current) => current + 1);
+      }
+    }, 400);
+  };
+
   const startRecording = () => {
-    if (!recognitionRef.current) {
-      alert("Trình duyệt của bạn không hỗ trợ Web Speech API. Vui lòng dùng Chrome trên PC.");
+    const recognition = createRecognition(
+      (currentTranscript) => {
+        setTranscript(currentTranscript);
+        checkAnswer(currentTranscript);
+      },
+      () => setStatus("error"),
+    );
+
+    if (!recognition) {
+      setSpeechUnsupported(true);
+      setStatus("error");
       return;
     }
-    setStatus('recording');
-    setTranscript('');
-    try {
-      recognitionRef.current.start();
-    } catch(e) {
-      console.error("Could not start recognition:", e);
-    }
 
-    setTimeout(() => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(e) {}
-      }
-    }, 5000);
+    recognition.onend = () => {
+      setStatus((current) => (current === "recording" ? "error" : current));
+    };
+
+    recognitionRef.current = recognition;
+    setStatus("recording");
+    setTranscript("");
+
+    try {
+      recognition.start();
+      window.setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          // Browser may have already stopped recognition.
+        }
+      }, 5000);
+    } catch (error) {
+      console.error("Could not start recognition:", error);
+      setStatus("error");
+    }
   };
 
   const stopRecording = () => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(e) {}
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Browser may have already stopped recognition.
     }
   };
 
-  const checkAnswer = (recordedText: string) => {
-    setStatus('processing');
-    
-    const cleanRecorded = recordedText.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
-    const cleanAnswer = question.answer.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
-
-    setTimeout(() => {
-      if (cleanRecorded === cleanAnswer) {
-        setStatus('correct');
-      } else {
-        setStatus('incorrect');
-        setRetryCount(prev => prev + 1);
-      }
-    }, 500); 
-  };
-
-  const handleSkipOrNext = (isCorrectRes: boolean) => {
-    onNext(isCorrectRes, transcript);
-  };
+  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : question.answer;
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
-      <div className="bg-white text-neutral-900 p-8 rounded-2xl shadow-xl border-2 border-neutral-100 min-h-[400px] flex flex-col justify-between">
-        
-        {/* HEADER AREA */}
-        <div className="space-y-4">
-          <div className="text-center">
-            <h2 className="text-5xl font-bold text-neutral-800">{displayWord}</h2>
-            {contentData.ipa && <p className="text-2xl font-ipa text-neutral-500 mt-2">{contentData.ipa}</p>}
-          </div>
-
-          {(status === 'idle' || status === 'error' || status === 'incorrect') && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={handlePlayAudio}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors font-semibold border border-primary-200
-                  ${isPlaying ? 'animate-pulse bg-primary-100' : ''}`}
-              >
-                <span className="text-xl">🔊</span>
-                {isPlaying ? 'Đang phát...' : 'Nghe phát âm mẫu'}
-              </button>
-            </div>
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <div className="flex min-h-[400px] flex-col justify-between rounded-xl border border-neutral-200 bg-white p-8 text-neutral-900 shadow-sm">
+        <div className="space-y-4 text-center">
+          <h2 className="text-5xl font-bold text-neutral-900">{displayWord}</h2>
+          {contentData.ipa && <p className="font-ipa text-2xl text-neutral-500">{contentData.ipa}</p>}
+          {(status === "idle" || status === "error" || status === "incorrect") && (
+            <AudioButton audioUrl={contentData.audioUrl} label="Nghe phát âm mẫu" />
           )}
         </div>
 
-        {/* CONTENT / STATUS AREA */}
-        <div className="flex-1 mt-8 flex items-center justify-center">
-          
-          {status === 'idle' && (
-            <div className="text-center w-full animate-fade-in">
-              <p className="text-lg text-neutral-500 mb-6 font-medium">{question.name}</p>
+        <div className="mt-8 flex flex-1 items-center justify-center">
+          {status === "idle" && (
+            <div className="w-full text-center">
+              <p className="mb-6 text-lg font-medium text-neutral-500">{question.name || "Đọc thành tiếng"}</p>
+              {speechUnsupported && (
+                <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 p-4 text-sm font-medium text-warning-800" role="alert">
+                  Trình duyệt hiện tại không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge trên desktop để demo chức năng ghi âm.
+                </div>
+              )}
               <button
+                type="button"
                 onClick={startRecording}
-                className="w-full py-4 rounded-xl border-2 border-neutral-200 hover:border-primary-400 hover:bg-primary-50 text-neutral-700 transition-all flex items-center justify-center gap-3"
+                className="flex min-h-14 w-full items-center justify-center rounded-xl border-2 border-neutral-200 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:border-primary-400 hover:bg-primary-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
               >
-                <span className="text-2xl">🎤</span>
-                <span className="text-lg font-bold">Bắt đầu ghi âm</span>
+                Bắt đầu ghi âm
               </button>
             </div>
           )}
 
-          {status === 'recording' && (
-            <div className="text-center w-full animate-fade-in">
-              <div className="flex items-center justify-center gap-3 mb-6 text-error-500">
-                <span className="w-3 h-3 rounded-full bg-error-500 animate-pulse"></span>
+          {status === "recording" && (
+            <div className="w-full text-center">
+              <div className="mb-6 flex items-center justify-center gap-3 text-error-600" role="status">
+                <span className="h-3 w-3 rounded-full bg-error-500" aria-hidden="true" />
                 <span className="font-bold">Đang nghe...</span>
               </div>
-              <div className="flex items-end justify-center gap-1 h-8 mb-8 opacity-70">
-                <div className="w-2 bg-neutral-400 animate-wave h-3"></div>
-                <div className="w-2 bg-neutral-400 animate-wave h-6" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 bg-neutral-400 animate-wave h-8" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 bg-neutral-400 animate-wave h-4" style={{ animationDelay: '0.3s' }}></div>
-                <div className="w-2 bg-neutral-400 animate-wave h-7" style={{ animationDelay: '0.4s' }}></div>
-              </div>
               <button
+                type="button"
                 onClick={stopRecording}
-                className="w-full py-4 rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold transition-all flex items-center justify-center gap-3"
+                className="flex min-h-14 w-full items-center justify-center rounded-xl bg-neutral-100 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:bg-neutral-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
               >
-                <span className="w-4 h-4 bg-primary-500 rounded-sm"></span>
-                <span className="text-lg font-bold">Dừng ghi âm</span>
+                Dừng ghi âm
               </button>
             </div>
           )}
 
-          {status === 'processing' && (
-            <div className="text-center animate-pulse text-neutral-500 font-medium">
+          {status === "processing" && (
+            <div className="text-center font-medium text-neutral-500" role="status">
               Đang phân tích giọng nói...
             </div>
           )}
 
-          {status === 'error' && (
-            <div className="text-center w-full animate-fade-in">
-              <div className="bg-warning-50 text-warning-700 p-4 rounded-lg border border-warning-200 flex items-center gap-3 mb-6 font-medium">
-                <span>⚠️</span>
-                <span>Không nghe thấy gì, hoặc có lỗi kết nối.</span>
+          {status === "error" && (
+            <div className="w-full text-center">
+              <div className="mb-6 rounded-lg border border-warning-200 bg-warning-50 p-4 text-warning-800" role="alert">
+                {speechUnsupported
+                  ? "Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge trên desktop."
+                  : "Không nghe thấy giọng nói hoặc có lỗi kết nối. Hãy thử lại."}
               </div>
               <button
+                type="button"
                 onClick={startRecording}
-                className="w-full py-4 rounded-xl border-2 border-neutral-200 hover:border-primary-400 hover:bg-primary-50 text-neutral-700 font-bold transition-all flex items-center justify-center gap-3"
+                className="flex min-h-14 w-full items-center justify-center rounded-xl border-2 border-neutral-200 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:border-primary-400 hover:bg-primary-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
               >
-                <span className="text-2xl">🎤</span>
-                <span className="text-lg">Thử lại</span>
+                Thử lại
               </button>
             </div>
           )}
 
-          {status === 'correct' && (
-            <div className="w-full animate-slide-up text-left space-y-6">
-              <div className="flex items-center gap-2 text-success-600 font-bold text-xl">
-                <span>✅</span> Phát âm đúng!
+          {status === "correct" && (
+            <div className="w-full space-y-6 text-left">
+              <h3 className="text-xl font-bold text-success-700">Phát âm đúng</h3>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-700">
+                <p>
+                  Bạn nói: <span className="font-bold text-neutral-900">"{transcript}"</span>
+                </p>
+                <p>
+                  Đáp án: <span className="font-bold text-success-700">"{question.answer}"</span>
+                </p>
               </div>
-              
-              <div className="font-mono text-neutral-600 bg-neutral-50 p-4 rounded-lg border border-neutral-200">
-                <p>Bạn nói: <span className="text-neutral-900 font-bold">"{transcript}"</span></p>
-                <p>Đáp án: <span className="text-success-600 font-bold">"{question.answer}"</span> ✔️</p>
-              </div>
-
               <button
-                onClick={() => handleSkipOrNext(true)}
-                className="w-full py-4 rounded-xl bg-success-500 hover:bg-success-600 text-white font-bold transition-all shadow-md hover:-translate-y-1"
+                type="button"
+                onClick={() => onNext(true, transcript)}
+                className="min-h-14 w-full rounded-xl bg-success-600 px-4 py-4 font-bold text-white transition-all hover:bg-success-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-500"
               >
-                Tiếp theo →
+                Tiếp theo
               </button>
             </div>
           )}
 
-          {status === 'incorrect' && (
-            <div className="w-full animate-slide-up text-left space-y-6">
-              <div className="flex items-center gap-2 text-error-600 font-bold text-xl">
-                <span>❌</span> Chưa khớp
+          {status === "incorrect" && (
+            <div className="w-full space-y-6 text-left">
+              <h3 className="text-xl font-bold text-error-700">Chưa khớp</h3>
+              {retryCount > 0 && <p className="text-sm font-medium text-neutral-500">Số lần thử sai: {retryCount}</p>}
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-700">
+                <p>
+                  Bạn nói: <span className="font-bold text-error-700">"{transcript || "Không rõ"}"</span>
+                </p>
+                <p>
+                  Đáp án: <span className="font-bold text-neutral-900">"{question.answer}"</span>
+                </p>
               </div>
-
-              {retryCount > 0 && <p className="text-neutral-500 text-sm font-medium">Lần thử sai: {retryCount}</p>}
-
-              <div className="font-mono text-neutral-600 bg-neutral-50 p-4 rounded-lg border border-neutral-200">
-                <p>Bạn nói: <span className="text-error-600 font-bold">"{transcript}"</span></p>
-                <p>Đáp án: <span className="text-neutral-900 font-bold">"{question.answer}"</span></p>
-              </div>
-
               {contentData.hint && (
-                <div className="bg-warning-50 border border-warning-200 text-warning-800 p-4 rounded-lg flex items-start gap-3">
-                  <span className="mt-1 text-xl">💡</span>
-                  <p className="font-medium">{contentData.hint}</p>
+                <div className="rounded-lg border border-warning-200 bg-warning-50 p-4 text-warning-800">
+                  {contentData.hint}
                 </div>
               )}
-
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
+                  type="button"
                   onClick={startRecording}
-                  className="flex-1 py-4 rounded-xl border-2 border-primary-200 bg-primary-50 text-primary-700 font-bold hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
+                  className="min-h-14 flex-1 rounded-xl border-2 border-primary-200 bg-primary-50 px-4 py-4 font-bold text-primary-700 transition-all hover:bg-primary-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
                 >
-                  <span>🎤</span> Thử lại
+                  Thử lại
                 </button>
                 <button
-                  onClick={() => handleSkipOrNext(false)}
-                  className="flex-1 py-4 rounded-xl text-neutral-500 font-bold hover:bg-neutral-100 hover:text-neutral-900 transition-all flex items-center justify-center"
+                  type="button"
+                  onClick={() => onNext(false, transcript)}
+                  className="min-h-14 flex-1 rounded-xl px-4 py-4 font-bold text-neutral-600 transition-all hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
                 >
-                  Bỏ qua →
+                  Bỏ qua
                 </button>
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
   );
 }
 
-// Component con: Thử Thách Kép (Minimal Pairs) với giao diện ASCII
 function MinimalPairsQuestion({
   question,
-  onNext
+  onNext,
 }: {
-  question: any,
-  onNext: (isCorrect: boolean, selectedOpt: string) => void
+  question: ExerciseQuestion;
+  onNext: (isCorrect: boolean, transcript: string) => void;
 }) {
-  const [t1Status, setT1Status] = useState<'idle' | 'recording' | 'recorded'>('idle');
-  const [t2Status, setT2Status] = useState<'idle' | 'recording' | 'recorded'>('idle');
-  const [transcript1, setTranscript1] = useState('');
-  const [transcript2, setTranscript2] = useState('');
-  const [overallStatus, setOverallStatus] = useState<'idle' | 'processing' | 'correct' | 'incorrect'>('idle');
-  const [retryCount, setRetryCount] = useState(0);
+  const pairs = useMemo(() => parsePairPrompt(question.content), [question.content]);
+  const [statuses, setStatuses] = useState<Array<"idle" | "recording" | "recorded">>(["idle", "idle"]);
+  const [transcripts, setTranscripts] = useState(["", ""]);
+  const [overallStatus, setOverallStatus] = useState<"idle" | "processing" | "correct" | "incorrect">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  const [playingId, setPlayingId] = useState<number | null>(null);
-  const audioRefs = useRef<(HTMLAudioElement | null)[]>([null, null]);
-  const recognitionRef = useRef<any>(null);
-
-  // Parse content [ {word, ipa, audioUrl, hint}, {word, ipa, audioUrl, hint} ]
-  let pairs = [
-    { word: 'Word1', ipa: '/w1/', audioUrl: '', hint: '' },
-    { word: 'Word2', ipa: '/w2/', audioUrl: '', hint: '' }
-  ];
-  try {
-    pairs = JSON.parse(question.content);
-  } catch (e) {}
-
-  const handlePlayAudio = (index: number) => {
-    if (playingId !== null) return;
-    const url = pairs[index].audioUrl;
-    if (!url) return;
-
-    if (!audioRefs.current[index]) {
-      audioRefs.current[index] = new Audio(url);
-      audioRefs.current[index]!.onended = () => setPlayingId(null);
-    }
-    setPlayingId(index);
-    const playPromise = audioRefs.current[index]!.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((e) => {
-        console.warn("Autoplay prevented:", e);
-        setPlayingId(null);
-      });
-    }
-  };
+  useEffect(() => {
+    setStatuses(["idle", "idle"]);
+    setTranscripts(["", ""]);
+    setOverallStatus("idle");
+    setErrorMessage(null);
+  }, [question.id]);
 
   const startRecording = (index: number) => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Trình duyệt không hỗ trợ Web Speech API.");
+    const recognition = createRecognition(
+      (currentTranscript) => {
+        setTranscripts((current) => current.map((item, itemIndex) => (itemIndex === index ? currentTranscript : item)));
+        setStatuses((current) => current.map((item, itemIndex) => (itemIndex === index ? "recorded" : item)));
+      },
+      () => {
+        setStatuses((current) => current.map((item, itemIndex) => (itemIndex === index ? "idle" : item)));
+        setErrorMessage("Không nghe thấy giọng nói hoặc có lỗi kết nối. Hãy thử lại.");
+      },
+    );
+
+    if (!recognition) {
+      setErrorMessage("Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge trên desktop.");
       return;
     }
 
-    if (index === 0) {
-      setT1Status('recording');
-      setTranscript1('');
-    } else {
-      setT2Status('recording');
-      setTranscript2('');
-    }
-
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.lang = 'en-US';
-    recognitionRef.current.interimResults = false;
-    recognitionRef.current.maxAlternatives = 1;
-
-    recognitionRef.current.onresult = (event: any) => {
-      const currentTranscript = event.results[0][0].transcript;
-      if (index === 0) {
-        setTranscript1(currentTranscript);
-        setT1Status('recorded');
-      } else {
-        setTranscript2(currentTranscript);
-        setT2Status('recorded');
-      }
+    recognition.onend = () => {
+      setStatuses((current) => current.map((item, itemIndex) => (itemIndex === index && item === "recording" ? "idle" : item)));
     };
 
-    recognitionRef.current.onerror = (event: any) => {
-      if (index === 0) setT1Status('idle'); else setT2Status('idle');
-    };
-
-    recognitionRef.current.onend = () => {
-      // Bắt trường hợp dừng ghi âm mà chưa có kết quả
-      if (index === 0 && t1Status === 'recording') setT1Status('idle');
-      if (index === 1 && t2Status === 'recording') setT2Status('idle');
-    };
+    recognitionRef.current = recognition;
+    setErrorMessage(null);
+    setStatuses((current) => current.map((item, itemIndex) => (itemIndex === index ? "recording" : item)));
 
     try {
-      recognitionRef.current.start();
-    } catch(e) {}
-
-    setTimeout(() => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(e) {}
-      }
-    }, 5000);
+      recognition.start();
+      window.setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          // Browser may have already stopped recognition.
+        }
+      }, 5000);
+    } catch (error) {
+      console.error("Could not start recognition:", error);
+      setErrorMessage("Không thể bắt đầu ghi âm. Hãy thử lại.");
+      setStatuses((current) => current.map((item, itemIndex) => (itemIndex === index ? "idle" : item)));
+    }
   };
 
   const checkBothAnswers = () => {
-    setOverallStatus('processing');
-    
-    const clean1 = transcript1.toLowerCase().replace(/[^\w\s]/g, "").trim();
-    const ans1 = pairs[0].word.toLowerCase().replace(/[^\w\s]/g, "").trim();
-    
-    const clean2 = transcript2.toLowerCase().replace(/[^\w\s]/g, "").trim();
-    const ans2 = pairs[1].word.toLowerCase().replace(/[^\w\s]/g, "").trim();
+    setOverallStatus("processing");
 
-    setTimeout(() => {
-      if (clean1 === ans1 && clean2 === ans2) {
-        setOverallStatus('correct');
-      } else {
-        setOverallStatus('incorrect');
-        setRetryCount(prev => prev + 1);
-      }
-    }, 500);
+    window.setTimeout(() => {
+      const firstCorrect = normalizeAnswer(transcripts[0]) === normalizeAnswer(pairs[0].word);
+      const secondCorrect = normalizeAnswer(transcripts[1]) === normalizeAnswer(pairs[1].word);
+      setOverallStatus(firstCorrect && secondCorrect ? "correct" : "incorrect");
+    }, 400);
   };
 
-  const handleSkipOrNext = (isCorrectRes: boolean) => {
-    onNext(isCorrectRes, `1:${transcript1}|2:${transcript2}`);
-  };
-
-  // Ký tự ASCII Border Helper
-  const AsciiBox = ({ children, title }: { children: React.ReactNode, title?: string }) => (
-    <div className="relative border border-dashed border-neutral-500 p-6 flex flex-col items-center">
-      <span className="absolute -top-[10px] -left-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-      <span className="absolute -top-[10px] -right-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-      <span className="absolute -bottom-[10px] -left-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-      <span className="absolute -bottom-[10px] -right-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-      {title && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] px-4 font-mono text-neutral-400 tracking-widest">
-          {title}
-        </div>
-      )}
-      {children}
-    </div>
-  );
+  const combinedTranscript = transcripts.filter(Boolean).join(" ");
+  const canCheck = statuses[0] === "recorded" && statuses[1] === "recorded";
 
   return (
-    <div className="w-full max-w-4xl mx-auto font-mono text-neutral-300 bg-[#0a0a0a] p-8 rounded-xl shadow-2xl overflow-hidden selection:bg-neutral-700">
-      <div className="text-center mb-10 space-y-2">
-        <h2 className="text-2xl font-bold tracking-[0.2em] uppercase text-white">THỬ THÁCH MINIMAL PAIRS</h2>
-        <p className="text-neutral-400">{question.name}</p>
+    <div className="mx-auto w-full max-w-4xl rounded-xl bg-neutral-950 p-6 text-neutral-200 shadow-sm">
+      <div className="mb-8 text-center">
+        <h2 className="text-2xl font-bold uppercase tracking-widest text-white">Minimal pairs</h2>
+        <p className="mt-2 text-neutral-400">{question.name || "Đọc lần lượt hai từ"}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-8 mb-10">
-        {/* WORD 1 */}
-        <AsciiBox title="TỪ SỐ 1">
-          <div className="mt-4 text-center space-y-2">
-            <h3 className="text-3xl font-bold text-white uppercase flex items-center justify-center gap-2">
-              {t1Status === 'recorded' && <span className="text-success-400 text-lg">✅</span>}
-              {pairs[0].word}
-            </h3>
-            <p className="text-xl text-neutral-500">{pairs[0].ipa}</p>
-          </div>
-          
-          <button
-            onClick={() => handlePlayAudio(0)}
-            className={`mt-6 mb-8 px-4 py-1 border border-neutral-600 hover:border-white hover:text-white transition-colors
-              ${playingId === 0 ? 'text-white border-white animate-pulse' : 'text-neutral-400'}`}
-          >
-            [ 🔊 Nghe mẫu ]
-          </button>
+      {errorMessage && (
+        <div className="mb-6 rounded-lg border border-warning-300 bg-warning-50 p-4 text-sm font-bold text-warning-800" role="alert">
+          {errorMessage}
+        </div>
+      )}
 
-          <AsciiBox>
-            <button
-              onClick={() => startRecording(0)}
-              className="w-full py-2 font-bold tracking-wider hover:text-white transition-colors"
-            >
-              {t1Status === 'idle' && <span className="text-neutral-300">🎤 BẤM ĐỂ NÓI</span>}
-              {t1Status === 'recording' && <span className="text-error-500 animate-pulse">🔴 ĐANG NGHE...</span>}
-              {t1Status === 'recorded' && <span className="text-primary-400">🔄 GHI ÂM LẠI</span>}
-            </button>
-          </AsciiBox>
-          {t1Status === 'recorded' && (
-            <p className="mt-4 text-sm text-neutral-500">Bạn đọc: <span className="text-white">"{transcript1}"</span></p>
-          )}
-        </AsciiBox>
-
-        {/* WORD 2 */}
-        <AsciiBox title="TỪ SỐ 2">
-          <div className="mt-4 text-center space-y-2">
-            <h3 className="text-3xl font-bold text-white uppercase flex items-center justify-center gap-2">
-              {t2Status === 'recorded' && <span className="text-success-400 text-lg">✅</span>}
-              {pairs[1].word}
-            </h3>
-            <p className="text-xl text-neutral-500">{pairs[1].ipa}</p>
-          </div>
-          
-          <button
-            onClick={() => handlePlayAudio(1)}
-            className={`mt-6 mb-8 px-4 py-1 border border-neutral-600 hover:border-white hover:text-white transition-colors
-              ${playingId === 1 ? 'text-white border-white animate-pulse' : 'text-neutral-400'}`}
-          >
-            [ 🔊 Nghe mẫu ]
-          </button>
-
-          <AsciiBox>
-            <button
-              onClick={() => startRecording(1)}
-              className="w-full py-2 font-bold tracking-wider hover:text-white transition-colors"
-            >
-              {t2Status === 'idle' && <span className="text-neutral-300">🎤 BẤM ĐỂ NÓI</span>}
-              {t2Status === 'recording' && <span className="text-error-500 animate-pulse">🔴 ĐANG NGHE...</span>}
-              {t2Status === 'recorded' && <span className="text-primary-400">🔄 GHI ÂM LẠI</span>}
-            </button>
-          </AsciiBox>
-          {t2Status === 'recorded' && (
-            <p className="mt-4 text-sm text-neutral-500">Bạn đọc: <span className="text-white">"{transcript2}"</span></p>
-          )}
-        </AsciiBox>
-      </div>
-
-      <div className="border-t border-dashed border-neutral-600 pt-8 pb-4">
-        {overallStatus === 'idle' || overallStatus === 'processing' ? (
-          <button
-            onClick={checkBothAnswers}
-            disabled={t1Status !== 'recorded' || t2Status !== 'recorded' || overallStatus === 'processing'}
-            className={`w-full relative border border-dashed p-4 flex justify-center font-bold tracking-[0.2em] transition-all
-              ${t1Status === 'recorded' && t2Status === 'recorded' && overallStatus === 'idle' 
-                ? 'border-white text-white hover:bg-neutral-900 cursor-pointer' 
-                : 'border-neutral-700 text-neutral-700 cursor-not-allowed'}`}
-          >
-            <span className="absolute -top-[10px] -left-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-            <span className="absolute -top-[10px] -right-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-            <span className="absolute -bottom-[10px] -left-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-            <span className="absolute -bottom-[10px] -right-[6px] text-neutral-500 bg-[#0a0a0a] px-1">+</span>
-            {overallStatus === 'processing' ? 'ĐANG XỬ LÝ...' : 'KIỂM TRA'}
-          </button>
-        ) : overallStatus === 'correct' ? (
-          <div className="text-center animate-fade-in space-y-6">
-            <h3 className="text-success-400 text-2xl font-bold tracking-widest">✅ XUẤT SẮC!</h3>
-            <button
-              onClick={() => handleSkipOrNext(true)}
-              className="px-10 py-3 border border-success-400 text-success-400 hover:bg-success-400 hover:text-[#0a0a0a] transition-all font-bold tracking-wider"
-            >
-              [ CHUYỂN TIẾP ]
-            </button>
-          </div>
-        ) : (
-          <div className="text-center animate-fade-in space-y-6">
-            <h3 className="text-error-400 text-2xl font-bold tracking-widest">❌ CHƯA CHÍNH XÁC</h3>
-            {retryCount > 0 && <p className="text-neutral-500">Lần sai: {retryCount}</p>}
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => setOverallStatus('idle')}
-                className="px-6 py-3 border border-primary-400 text-primary-400 hover:bg-primary-400 hover:text-[#0a0a0a] transition-all font-bold tracking-wider"
-              >
-                [ LÀM LẠI ]
-              </button>
-              <button
-                onClick={() => handleSkipOrNext(false)}
-                className="px-6 py-3 border border-neutral-600 text-neutral-400 hover:bg-neutral-600 hover:text-white transition-all font-bold tracking-wider"
-              >
-                [ BỎ QUA ]
-              </button>
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        {pairs.map((pair, index) => (
+          <div key={`${pair.word}-${index}`} className="rounded-lg border border-neutral-700 p-6 text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Từ số {index + 1}</p>
+            <h3 className="text-3xl font-bold uppercase text-white">{pair.word}</h3>
+            {pair.ipa && <p className="mt-2 font-ipa text-xl text-neutral-400">{pair.ipa}</p>}
+            <div className="mt-5">
+              <AudioButton audioUrl={pair.audioUrl} label="Nghe mẫu" dark />
             </div>
+            <button
+              type="button"
+              onClick={() => startRecording(index)}
+              disabled={statuses[index] === "recording"}
+              className="mt-5 min-h-12 w-full rounded-lg border border-neutral-600 px-4 py-3 font-bold text-neutral-200 transition-colors hover:border-white hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 disabled:cursor-wait disabled:opacity-70"
+            >
+              {statuses[index] === "recording" ? "Đang nghe..." : statuses[index] === "recorded" ? "Ghi âm lại" : "Bấm để nói"}
+            </button>
+            {statuses[index] === "recorded" && (
+              <p className="mt-4 text-sm text-neutral-400">
+                Bạn đọc: <span className="text-white">"{transcripts[index]}"</span>
+              </p>
+            )}
           </div>
-        )}
+        ))}
       </div>
 
+      {overallStatus === "idle" || overallStatus === "processing" ? (
+        <button
+          type="button"
+          onClick={checkBothAnswers}
+          disabled={!canCheck || overallStatus === "processing"}
+          className="min-h-14 w-full rounded-lg border border-neutral-600 px-4 py-4 font-bold uppercase tracking-widest text-neutral-200 transition-colors hover:border-white hover:bg-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {overallStatus === "processing" ? "Đang kiểm tra" : "Kiểm tra"}
+        </button>
+      ) : overallStatus === "correct" ? (
+        <div className="space-y-5 text-center">
+          <h3 className="text-2xl font-bold text-success-400">Xuất sắc</h3>
+          <button
+            type="button"
+            onClick={() => onNext(true, combinedTranscript)}
+            className="min-h-12 rounded-lg border border-success-400 px-8 py-3 font-bold text-success-400 transition-colors hover:bg-success-400 hover:text-neutral-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-500"
+          >
+            Chuyển tiếp
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-5 text-center">
+          <h3 className="text-2xl font-bold text-error-400">Chưa chính xác</h3>
+          <p className="text-sm text-neutral-400">
+            Đáp án cần đạt: {pairs[0].word} {pairs[1].word}
+          </p>
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setOverallStatus("idle")}
+              className="min-h-12 rounded-lg border border-primary-400 px-6 py-3 font-bold text-primary-300 transition-colors hover:bg-primary-400 hover:text-neutral-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+            >
+              Làm lại
+            </button>
+            <button
+              type="button"
+              onClick={() => onNext(false, combinedTranscript)}
+              className="min-h-12 rounded-lg border border-neutral-600 px-6 py-3 font-bold text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+            >
+              Bỏ qua
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function ExerciseEngineClient({ exercise }: { exercise: any }) {
+export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseData }) {
   const router = useRouter();
+  const [startedAt] = useState(() => new Date().toISOString());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [incorrectQuestions, setIncorrectQuestions] = useState<any[]>([]);
-  
+  const [incorrectQuestions, setIncorrectQuestions] = useState<IncorrectQuestion[]>([]);
+  const [answers, setAnswers] = useState<SubmitAnswer[]>([]);
+  const answersRef = useRef<SubmitAnswer[]>([]);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -668,221 +733,322 @@ export default function ExerciseEngineClient({ exercise }: { exercise: any }) {
 
   const questions = exercise.questions;
   const currentQuestion = questions[currentIndex];
-  const progressPercent = ((currentIndex) / questions.length) * 100;
+  const progressPercent = questions.length > 0 ? (currentIndex / questions.length) * 100 : 0;
 
-  // Lấy Hint từ JSON nếu có
-  let currentHint = '';
-  try {
-    const data = JSON.parse(currentQuestion?.content || '{}');
-    currentHint = data.hint || '';
-  } catch(e) {}
+  const currentHint = useMemo(() => {
+    if (!currentQuestion) return "";
+    return parseWordPrompt(currentQuestion.content).hint ?? "";
+  }, [currentQuestion]);
 
-  const handleAnswerListen = (correct: boolean, answerOpt: string) => {
-    setIsAnswered(true);
-    setIsCorrect(correct);
-    setSelectedAnswer(answerOpt);
-    
-    if (correct) {
-      setScore(prev => prev + currentQuestion.score);
+  const recordAnswer = (answer: SubmitAnswer) => {
+    const existingIndex = answersRef.current.findIndex((item) => item.questionId === answer.questionId);
+    const nextAnswers = [...answersRef.current];
+
+    if (existingIndex >= 0) {
+      nextAnswers[existingIndex] = answer;
     } else {
-      setIncorrectQuestions(prev => [...prev, {
-        question: currentQuestion,
-        selected: answerOpt,
-        correct: currentQuestion.answer
-      }]);
+      nextAnswers.push(answer);
+    }
+
+    answersRef.current = nextAnswers;
+    setAnswers(nextAnswers);
+    return nextAnswers;
+  };
+
+  const submitExercise = async (finalAnswers: SubmitAnswer[]) => {
+    setSubmitStatus("submitting");
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/exercises/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exerciseId: exercise.id,
+          startedAt,
+          completedAt: new Date().toISOString(),
+          answers: finalAnswers,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success) {
+        setSubmitStatus("error");
+        setSubmitError(payload.error?.message || "Không lưu được kết quả bài làm.");
+        return;
+      }
+
+      setSubmitResult(payload.data);
+      setSubmitStatus("success");
+    } catch {
+      setSubmitStatus("error");
+      setSubmitError("Không kết nối được API lưu bài làm.");
     }
   };
 
-  const handleNextVoice = (correct: boolean, answerOpt: string) => {
-    if (correct) {
-      setScore(prev => prev + currentQuestion.score);
-    } else {
-      setIncorrectQuestions(prev => [...prev, {
+  const finishExercise = (finalAnswers = answersRef.current) => {
+    setIsFinished(true);
+    void submitExercise(finalAnswers);
+  };
+
+  const addIncorrectQuestion = (selected: string) => {
+    setIncorrectQuestions((current) => [
+      ...current,
+      {
         question: currentQuestion,
-        selected: answerOpt,
-        correct: currentQuestion.answer
-      }]);
-    }
-    
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+        selected,
+        correct: currentQuestion.answer,
+      },
+    ]);
+  };
+
+  const handleAnswerListen = (correct: boolean, answerOpt: string, selectedOptionId?: string | null) => {
+    setIsAnswered(true);
+    setIsCorrect(correct);
+    setSelectedAnswer(answerOpt);
+    recordAnswer({
+      questionId: currentQuestion.id,
+      selectedOptionId: selectedOptionId ?? null,
+      selectedText: answerOpt,
+      transcript: null,
+      timeSpent: null,
+    });
+
+    if (correct) {
+      setScore((current) => current + currentQuestion.score);
     } else {
-      setIsFinished(true);
+      addIncorrectQuestion(answerOpt);
+    }
+  };
+
+  const handleNextVoice = (correct: boolean, transcript: string) => {
+    const finalAnswers = recordAnswer({
+      questionId: currentQuestion.id,
+      selectedText: null,
+      transcript,
+      timeSpent: null,
+    });
+
+    if (correct) {
+      setScore((current) => current + currentQuestion.score);
+    } else {
+      addIncorrectQuestion(transcript);
+    }
+
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex((current) => current + 1);
+    } else {
+      finishExercise(finalAnswers);
     }
   };
 
   const handleNextListen = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      setCurrentIndex((current) => current + 1);
       setIsAnswered(false);
       setSelectedAnswer(null);
     } else {
-      setIsFinished(true);
+      finishExercise();
     }
   };
 
-  if (isFinished) {
-    const correctCount = questions.length - incorrectQuestions.length;
-    const isPassed = (correctCount / questions.length) >= 0.8;
-
+  if (questions.length === 0) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col items-center p-8">
-        <Card className="max-w-2xl w-full space-y-8 animate-fade-in text-center p-12">
-          {isPassed ? (
-            <div className="text-8xl mb-4">🎉</div>
-          ) : (
-            <div className="text-8xl mb-4">💪</div>
-          )}
-          
-          <h2 className="text-3xl font-bold text-neutral-900">
-            {isPassed ? "Hoàn thành Bài tập!" : "Cố gắng lên nhé!"}
-          </h2>
-          
-          <div className="bg-neutral-100 rounded-xl p-6 border border-neutral-200 inline-block w-full max-w-sm">
-            <p className="text-lg text-neutral-700 font-medium mb-2">Đúng {correctCount}/{questions.length} câu — {Math.round((correctCount/questions.length)*100)}%</p>
-            <ProgressBar value={(correctCount/questions.length)*100} max={100} color={isPassed ? "success" : "warning"} size="lg" />
-            <p className="text-sm font-bold mt-2 text-success-600">{isPassed ? "Xuất sắc!" : "Cần luyện tập thêm"}</p>
-          </div>
-
-          {incorrectQuestions.length > 0 && (
-            <div className="text-left bg-error-50 p-6 rounded-xl border border-error-200 mt-8">
-              <h3 className="text-lg font-bold text-error-800 mb-4">Các câu cần lưu ý:</h3>
-              <ul className="space-y-4">
-                {incorrectQuestions.map((iq, idx) => {
-                  let word = '';
-                  try { 
-                    const parsed = JSON.parse(iq.question.content);
-                    word = Array.isArray(parsed) ? `${parsed[0].word} & ${parsed[1].word}` : parsed.word;
-                  } catch(e) { word = iq.question.content }
-                  
-                  return (
-                    <li key={idx} className="bg-white p-4 rounded-lg border border-error-100 flex justify-between items-center">
-                      <div>
-                        <span className="font-bold text-xl mr-2">"{word}"</span>
-                        <span className="text-neutral-500">
-                          bạn {iq.question.type === 'qtype-2-voice' || iq.question.type === 'qtype-3-minimal-pairs' ? 'nói' : 'chọn'} <span className="text-error-600 font-bold">{iq.selected || 'Không rõ'}</span>, đúng là <span className="text-success-600 font-bold">{iq.correct}</span>
-                        </span>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
-          <Button 
-            className="w-full h-14 text-lg mt-8" 
-            onClick={() => router.push('/learning_map')}
-          >
-            Quay về Lộ trình
+      <div className="min-h-screen bg-neutral-50 p-8">
+        <Card>
+          <h1 className="text-2xl font-bold text-neutral-900">Bài tập chưa có câu hỏi</h1>
+          <p className="mt-2 text-neutral-600">Hãy thêm câu hỏi vào database trước khi demo bài này.</p>
+          <Button className="mt-6" onClick={() => router.push("/learning_map")}>
+            Quay về lộ trình
           </Button>
         </Card>
       </div>
     );
   }
 
-  const isVoiceTask = currentQuestion?.type === 'qtype-2-voice' || currentQuestion?.type === 'qtype-3-minimal-pairs';
+  if (isFinished) {
+    const correctCount = questions.length - incorrectQuestions.length;
+    const percent = Math.round((correctCount / questions.length) * 100);
+    const isPassed = percent >= 80;
+
+    return (
+      <div className="flex min-h-screen flex-col items-center bg-neutral-50 p-6 sm:p-8">
+        <Card className="w-full max-w-2xl space-y-8 p-8 text-center sm:p-12">
+          <div
+            className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-4xl font-black ${
+              isPassed ? "bg-success-50 text-success-700" : "bg-warning-50 text-warning-700"
+            }`}
+            aria-hidden="true"
+          >
+            {isPassed ? "OK" : "!"}
+          </div>
+
+          <h1 className="text-3xl font-bold text-neutral-900">{isPassed ? "Hoàn thành bài tập" : "Cần luyện thêm"}</h1>
+
+          <div className="mx-auto inline-block w-full max-w-sm rounded-xl border border-neutral-200 bg-neutral-100 p-6">
+            <p className="mb-2 text-lg font-medium text-neutral-700">
+              Đúng {correctCount}/{questions.length} câu - {percent}%
+            </p>
+            <ProgressBar value={percent} max={100} color={isPassed ? "success" : "warning"} size="lg" />
+            <p className={`mt-2 text-sm font-bold ${isPassed ? "text-success-700" : "text-warning-700"}`}>
+              {isPassed ? "Kết quả tốt" : "Hãy thử lại để cải thiện"}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left">
+            {submitStatus === "submitting" && (
+              <p className="text-sm font-medium text-neutral-600" role="status">
+                Đang lưu kết quả và tính XP...
+              </p>
+            )}
+
+            {submitStatus === "success" && submitResult && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-neutral-800">Kết quả đã lưu</span>
+                  <span className="rounded-full bg-success-50 px-3 py-1 text-sm font-bold text-success-700">
+                    {submitResult.exerciseScore}/100
+                  </span>
+                </div>
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-primary-50 p-3 text-primary-700">
+                    <dt className="font-semibold">XP</dt>
+                    <dd className="text-xl font-bold">+{submitResult.rewards.totalXpEarned}</dd>
+                  </div>
+                  <div className="rounded-lg bg-warning-50 p-3 text-warning-700">
+                    <dt className="font-semibold">Điểm hạng</dt>
+                    <dd className="text-xl font-bold">+{submitResult.rewards.totalRankingDelta}</dd>
+                  </div>
+                </dl>
+                <p className="text-sm text-neutral-600">
+                  Level hiện tại: <span className="font-bold text-neutral-900">{submitResult.progress.level}</span> - XP:{" "}
+                  <span className="font-bold text-neutral-900">{submitResult.progress.currentXp}</span>
+                </p>
+              </div>
+            )}
+
+            {submitStatus === "error" && (
+              <div className="rounded-lg bg-warning-50 p-4 text-sm text-warning-800" role="alert">
+                {submitError || "Kết quả local đã có, nhưng chưa lưu được vào database."}
+              </div>
+            )}
+          </div>
+
+          {incorrectQuestions.length > 0 && (
+            <div className="rounded-xl border border-error-200 bg-error-50 p-6 text-left">
+              <h2 className="mb-4 text-lg font-bold text-error-800">Câu cần luyện lại</h2>
+              <ul className="space-y-4">
+                {incorrectQuestions.map((item, index) => (
+                  <li key={`${item.question.id}-${index}`} className="rounded-lg border border-error-100 bg-white p-4">
+                    <p className="font-bold text-neutral-900">"{formatQuestionWord(item.question)}"</p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Bạn trả lời <span className="font-bold text-error-700">{item.selected || "Không rõ"}</span>, đáp án đúng là{" "}
+                      <span className="font-bold text-success-700">{item.correct}</span>.
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <Button className="mt-8 h-14 w-full text-lg" onClick={() => router.push("/learning_map")}>
+            Quay về lộ trình
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const isVoiceTask = currentQuestion?.type === "qtype-2-voice" || currentQuestion?.type === "qtype-3-minimal-pairs";
 
   return (
-    <div className={`min-h-screen flex flex-col ${isVoiceTask ? 'bg-[#0a0a0a]' : 'bg-neutral-50'}`}>
-      {/* Header Bar */}
-      <header className={`${isVoiceTask ? 'bg-transparent border-neutral-800' : 'bg-white border-neutral-200'} border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 transition-colors`}>
-        <button onClick={() => router.back()} className={`${isVoiceTask ? 'text-neutral-500 hover:text-white' : 'text-neutral-400 hover:text-neutral-900'} text-2xl font-bold p-2 transition-colors`}>
-          ×
+    <div className={`flex min-h-screen flex-col ${isVoiceTask ? "bg-neutral-950" : "bg-neutral-50"}`}>
+      <header
+        className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-4 transition-colors sm:px-6 ${
+          isVoiceTask ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-white"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Quay lại trang trước"
+          className={`rounded-lg p-2 text-xl font-bold transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 ${
+            isVoiceTask ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"
+          }`}
+        >
+          X
         </button>
-        <div className="flex-1 mx-8 max-w-2xl">
-          <ProgressBar value={progressPercent} max={100} size="lg" color={isVoiceTask ? "primary" : "primary"} />
+        <div className="mx-4 max-w-2xl flex-1">
+          <ProgressBar value={progressPercent} max={100} size="lg" showPercentage={false} label={`Câu ${currentIndex + 1}/${questions.length}`} />
         </div>
-        <div className={`font-bold flex items-center gap-2 ${isVoiceTask ? 'text-neutral-400' : 'text-neutral-700'}`}>
-          <span className="text-blue-500 text-xl">💎</span> {score}
+        <div className={`min-w-16 text-right font-bold ${isVoiceTask ? "text-neutral-300" : "text-neutral-700"}`} aria-label={`Điểm hiện tại ${score}`}>
+          {score} điểm
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-6 mt-12 flex flex-col">
-        {!currentQuestion ? (
-          <div className="text-center text-white">Dữ liệu đang được tải...</div>
-        ) : (
-          <div className="animate-slide-up flex-1 flex flex-col">
-            <div className={`text-sm font-bold ${isVoiceTask ? 'text-neutral-500' : 'text-neutral-400'} mb-10 uppercase tracking-wider text-center`}>
-              Câu {currentIndex + 1} / {questions.length}
-            </div>
+      <main className="mx-auto mt-10 flex w-full max-w-4xl flex-1 flex-col p-4 sm:p-6">
+        <div className={`mb-10 text-center text-sm font-bold uppercase tracking-wider ${isVoiceTask ? "text-neutral-500" : "text-neutral-400"}`}>
+          Câu {currentIndex + 1} / {questions.length}
+        </div>
 
-            {currentQuestion.type === 'qtype-1-mc' && (
-              <ListenChooseQuestion 
-                question={currentQuestion} 
-                onAnswer={handleAnswerListen} 
-                isAnswered={isAnswered}
-                selectedAnswer={selectedAnswer}
-              />
-            )}
-            
-            {currentQuestion.type === 'qtype-2-voice' && (
-              <VoiceQuestion 
-                key={currentQuestion.id}
-                question={currentQuestion} 
-                onNext={handleNextVoice} 
-              />
-            )}
+        {currentQuestion.type === "qtype-1-mc" && (
+          <ListenChooseQuestion question={currentQuestion} onAnswer={handleAnswerListen} isAnswered={isAnswered} selectedAnswer={selectedAnswer} />
+        )}
 
-            {currentQuestion.type === 'qtype-3-minimal-pairs' && (
-              <MinimalPairsQuestion 
-                key={currentQuestion.id}
-                question={currentQuestion} 
-                onNext={handleNextVoice} 
-              />
-            )}
-          </div>
+        {currentQuestion.type === "qtype-2-voice" && <VoiceQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} />}
+
+        {currentQuestion.type === "qtype-3-minimal-pairs" && (
+          <MinimalPairsQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} />
         )}
       </main>
 
-      {/* Footer Feedback Bar (Chỉ hiển thị cho Bài Luyện Tai) */}
       {!isVoiceTask && (
-        <div className={`fixed bottom-0 left-0 right-0 p-6 transition-all duration-300 transform border-t-2
-          ${isAnswered ? 'translate-y-0' : 'translate-y-full'}
-          ${isCorrect ? 'bg-success-50 border-success-200' : 'bg-error-50 border-error-200'}`}
+        <div
+          className={`fixed bottom-0 left-0 right-0 border-t-2 p-4 transition-transform duration-300 sm:p-6 ${
+            isAnswered ? "translate-y-0" : "translate-y-full"
+          } ${isCorrect ? "border-success-200 bg-success-50" : "border-error-200 bg-error-50"}`}
+          role="status"
+          aria-live="polite"
         >
-          <div className="max-w-4xl mx-auto flex items-start justify-between">
-            <div className="flex items-start gap-6 flex-1">
-              <div className={`w-16 h-16 rounded-full flex flex-shrink-0 items-center justify-center text-4xl shadow-sm
-                ${isCorrect ? 'bg-white text-success-500' : 'bg-white text-error-500'}`}
+          <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-1 items-start gap-4">
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-black ${
+                  isCorrect ? "bg-white text-success-600" : "bg-white text-error-600"
+                }`}
+                aria-hidden="true"
               >
-                {isCorrect ? '✓' : '×'}
+                {isCorrect ? "OK" : "!"}
               </div>
               <div className="space-y-3">
-                <h3 className={`text-2xl font-bold ${isCorrect ? 'text-success-700' : 'text-error-700'}`}>
-                  {isCorrect ? `Chính xác! ${currentQuestion.answer}` : `Bạn chọn ${selectedAnswer} — Chưa đúng`}
-                </h3>
-                
+                <h2 className={`text-2xl font-bold ${isCorrect ? "text-success-700" : "text-error-700"}`}>
+                  {isCorrect ? `Chính xác: ${currentQuestion.answer}` : `Bạn chọn ${selectedAnswer} - chưa đúng`}
+                </h2>
                 {!isCorrect && (
-                  <p className="text-error-700 font-medium">
-                    ✔️ Đáp án đúng là <span className="font-bold text-xl">{currentQuestion.answer}</span>
+                  <p className="font-medium text-error-700">
+                    Đáp án đúng là <span className="text-xl font-bold">{currentQuestion.answer}</span>
                   </p>
                 )}
-
-                {/* Hint */}
                 {currentHint && (
-                  <div className={`mt-2 text-sm p-4 rounded-lg flex items-start gap-3 
-                    ${isCorrect ? 'bg-success-100 text-success-800' : 'bg-error-100 text-error-800'}`}>
-                    <span className="text-xl">💡</span>
-                    <p>{currentHint}</p>
+                  <div className={`mt-2 rounded-lg p-4 text-sm ${isCorrect ? "bg-success-100 text-success-800" : "bg-error-100 text-error-800"}`}>
+                    {currentHint}
                   </div>
                 )}
               </div>
             </div>
 
-            <Button 
-              variant={isCorrect ? "success" : "error"} 
-              size="lg" 
-              className="w-48 text-lg py-6 shadow-xl hover:-translate-y-1 ml-6 mt-4"
+            <Button
+              variant={isCorrect ? "success" : "error"}
+              size="lg"
+              className="min-h-14 w-full text-lg sm:mt-2 sm:w-48"
               onClick={handleNextListen}
             >
-              Tiếp theo →
+              Tiếp theo
             </Button>
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -71,23 +71,19 @@ export default function ExerciseType4({ question, options, onComplete }: Exercis
       const normalizedSpoken = normalize(spokenText);
       
       // Tìm phương án khớp
-      let matchedOption: Option | null = null;
-      
-      options.forEach((option, index) => {
+      const matchedOption = options.find((option, index) => {
         const optionLetter = String.fromCharCode(65 + index); // A, B, C, D
         const normalizedOptionText = normalize(option.text);
         const normalizedOptionLetter = normalize(optionLetter);
         
         // Khớp nếu nói chữ cái (A, B, C, D) hoặc nội dung đáp án
-        if (normalizedSpoken.includes(normalizedOptionLetter) || 
-            normalizedSpoken.includes(normalizedOptionText)) {
-          matchedOption = option;
-          setSelectedOption(option.id);
-        }
+        return normalizedSpoken.includes(normalizedOptionLetter) ||
+          normalizedSpoken.includes(normalizedOptionText);
       });
 
       // Kiểm tra kết quả
       if (matchedOption) {
+        setSelectedOption(matchedOption.id);
         const isCorrect = matchedOption.isCorrect;
         setResult({
           isCorrect,
