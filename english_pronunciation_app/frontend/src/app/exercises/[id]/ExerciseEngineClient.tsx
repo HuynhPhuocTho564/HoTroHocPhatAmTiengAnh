@@ -296,7 +296,7 @@ function ListenChooseQuestion({
     <div className="space-y-10 text-center">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-5xl font-bold text-neutral-900 sm:text-6xl">{displayWord}</h2>
-        {contentData.ipa && <p className="font-ipa text-2xl text-neutral-500">{contentData.ipa}</p>}
+        {/* IPA is hidden in listen_choose mode - user must rely on audio */}
         <AudioButton audioUrl={contentData.audioUrl} label="Phát lại audio" />
       </div>
 
@@ -354,6 +354,12 @@ function VoiceQuestion({
   const [speechUnsupported, setSpeechUnsupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
+  // Detect if this is sentence mode (longer text, has spaces beyond single word)
+  const isSentenceMode = useMemo(() => {
+    const answerWords = question.answer.trim().split(/\s+/);
+    return answerWords.length > 2; // More than 2 words = sentence
+  }, [question.answer]);
+
   useEffect(() => {
     setSpeechUnsupported(getSpeechRecognitionConstructor() === null);
     setStatus("idle");
@@ -405,7 +411,7 @@ function VoiceQuestion({
         } catch {
           // Browser may have already stopped recognition.
         }
-      }, 5000);
+      }, isSentenceMode ? 8000 : 5000); // Longer timeout for sentences
     } catch (error) {
       console.error("Could not start recognition:", error);
       setStatus("error");
@@ -421,47 +427,81 @@ function VoiceQuestion({
   };
 
   const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : question.answer;
+  const badgeColor = isSentenceMode ? "accent" : "success";
+  const badgeText = isSentenceMode ? "🎯 Thực chiến" : "🗣️ Luyện miệng";
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div className="flex min-h-[400px] flex-col justify-between rounded-xl border border-neutral-200 bg-white p-8 text-neutral-900 shadow-sm">
-        <div className="space-y-4 text-center">
-          <h2 className="text-5xl font-bold text-neutral-900">{displayWord}</h2>
-          {contentData.ipa && <p className="font-ipa text-2xl text-neutral-500">{contentData.ipa}</p>}
-          {(status === "idle" || status === "error" || status === "incorrect") && (
-            <AudioButton audioUrl={contentData.audioUrl} label="Nghe phát âm mẫu" />
+    <div className="mx-auto w-full max-w-3xl">
+      <div className={`rounded-2xl border-2 p-8 shadow-lg ${isSentenceMode ? "border-accent-300 bg-gradient-to-br from-accent-50 to-white" : "border-success-300 bg-gradient-to-br from-white to-neutral-50"}`}>
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className={`mb-3 inline-block rounded-full px-4 py-1.5 text-sm font-bold ${isSentenceMode ? "bg-accent-100 text-accent-700" : "bg-success-100 text-success-700"}`}>
+            {badgeText}
+          </div>
+          {isSentenceMode ? (
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold tracking-tight text-neutral-900">{question.answer}</h2>
+              <p className="text-lg font-medium text-neutral-600">Đọc câu hoàn chỉnh</p>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-6xl font-black tracking-tight text-neutral-900">{displayWord}</h2>
+              {contentData.ipa && (
+                <p className="mt-3 font-ipa text-3xl font-medium text-primary-600">{contentData.ipa}</p>
+              )}
+            </>
           )}
         </div>
 
-        <div className="mt-8 flex flex-1 items-center justify-center">
+        {/* Audio sample button */}
+        {(status === "idle" || status === "error" || status === "incorrect") && contentData.audioUrl && (
+          <div className="mb-6 flex justify-center">
+            <AudioButton audioUrl={contentData.audioUrl} label="🔊 Nghe phát âm mẫu" />
+          </div>
+        )}
+
+        {/* Main interaction area */}
+        <div className="min-h-[280px]">
           {status === "idle" && (
-            <div className="w-full text-center">
-              <p className="mb-6 text-lg font-medium text-neutral-500">{question.name || "Đọc thành tiếng"}</p>
+            <div className="space-y-6 text-center">
+              <p className="text-lg font-medium text-neutral-600">
+                {question.name || (isSentenceMode ? "Hãy đọc câu này thành tiếng" : "Hãy đọc từ này thành tiếng")}
+              </p>
               {speechUnsupported && (
-                <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 p-4 text-sm font-medium text-warning-800" role="alert">
-                  Trình duyệt hiện tại không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge trên desktop để demo chức năng ghi âm.
+                <div className="rounded-xl border-2 border-warning-300 bg-warning-50 p-4 text-sm font-semibold text-warning-800" role="alert">
+                  ⚠️ Trình duyệt chưa hỗ trợ Web Speech API. Hãy dùng Chrome hoặc Edge.
                 </div>
               )}
               <button
                 type="button"
                 onClick={startRecording}
-                className="flex min-h-14 w-full items-center justify-center rounded-xl border-2 border-neutral-200 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:border-primary-400 hover:bg-primary-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+                className={`group relative mx-auto flex h-32 w-32 items-center justify-center overflow-hidden rounded-full shadow-xl transition-all hover:scale-105 hover:shadow-2xl focus:outline-none focus-visible:ring-4 ${isSentenceMode ? "bg-gradient-to-br from-accent-500 to-accent-600 focus-visible:ring-accent-300" : "bg-gradient-to-br from-error-500 to-error-600 focus-visible:ring-error-300"}`}
               >
-                Bắt đầu ghi âm
+                <div className="absolute inset-0 bg-white opacity-0 transition-opacity group-hover:opacity-20" />
+                <span className="text-5xl" role="img" aria-label="microphone">🎤</span>
               </button>
+              <p className="text-sm font-bold text-neutral-500">Nhấn để bắt đầu ghi âm</p>
             </div>
           )}
 
           {status === "recording" && (
-            <div className="w-full text-center">
-              <div className="mb-6 flex items-center justify-center gap-3 text-error-600" role="status">
-                <span className="h-3 w-3 rounded-full bg-error-500" aria-hidden="true" />
-                <span className="font-bold">Đang nghe...</span>
+            <div className="space-y-6 text-center">
+              <div className="mx-auto flex h-32 w-32 items-center justify-center">
+                <div className="relative">
+                  <div className={`absolute inset-0 animate-ping rounded-full opacity-75 ${isSentenceMode ? "bg-accent-400" : "bg-error-400"}`} />
+                  <div className={`relative flex h-32 w-32 items-center justify-center rounded-full text-5xl ${isSentenceMode ? "bg-accent-500" : "bg-error-500"}`}>
+                    🎤
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className={`text-xl font-bold ${isSentenceMode ? "text-accent-600" : "text-error-600"}`}>Đang nghe...</p>
+                <p className="text-sm text-neutral-500">{isSentenceMode ? "Đọc rõ ràng cả câu" : "Nói rõ ràng vào microphone"}</p>
               </div>
               <button
                 type="button"
                 onClick={stopRecording}
-                className="flex min-h-14 w-full items-center justify-center rounded-xl bg-neutral-100 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:bg-neutral-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+                className="rounded-xl bg-neutral-200 px-8 py-3 font-bold text-neutral-700 transition-colors hover:bg-neutral-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-400"
               >
                 Dừng ghi âm
               </button>
@@ -469,22 +509,31 @@ function VoiceQuestion({
           )}
 
           {status === "processing" && (
-            <div className="text-center font-medium text-neutral-500" role="status">
-              Đang phân tích giọng nói...
+            <div className="space-y-6 text-center">
+              <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+              <p className="text-lg font-semibold text-neutral-600">Đang phân tích giọng nói...</p>
             </div>
           )}
 
           {status === "error" && (
-            <div className="w-full text-center">
-              <div className="mb-6 rounded-lg border border-warning-200 bg-warning-50 p-4 text-warning-800" role="alert">
-                {speechUnsupported
-                  ? "Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge trên desktop."
-                  : "Không nghe thấy giọng nói hoặc có lỗi kết nối. Hãy thử lại."}
+            <div className="space-y-6 text-center">
+              <div className="text-6xl">😕</div>
+              <div className="rounded-xl border-2 border-warning-300 bg-warning-50 p-6 text-warning-800">
+                <p className="font-bold">
+                  {speechUnsupported
+                    ? "Trình duyệt không hỗ trợ"
+                    : "Không nghe thấy giọng nói"}
+                </p>
+                <p className="mt-2 text-sm">
+                  {speechUnsupported
+                    ? "Hãy dùng Chrome hoặc Edge để sử dụng tính năng này"
+                    : "Hãy kiểm tra microphone và thử lại"}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={startRecording}
-                className="flex min-h-14 w-full items-center justify-center rounded-xl border-2 border-neutral-200 px-4 py-4 text-lg font-bold text-neutral-800 transition-all hover:border-primary-400 hover:bg-primary-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+                className="rounded-xl bg-primary-600 px-8 py-4 font-bold text-white transition-colors hover:bg-primary-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300"
               >
                 Thử lại
               </button>
@@ -492,57 +541,63 @@ function VoiceQuestion({
           )}
 
           {status === "correct" && (
-            <div className="w-full space-y-6 text-left">
-              <h3 className="text-xl font-bold text-success-700">Phát âm đúng</h3>
-              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-700">
-                <p>
-                  Bạn nói: <span className="font-bold text-neutral-900">"{transcript}"</span>
-                </p>
-                <p>
-                  Đáp án: <span className="font-bold text-success-700">"{question.answer}"</span>
-                </p>
+            <div className="space-y-6">
+              <div className="text-center text-7xl">🎉</div>
+              <div className="rounded-xl border-2 border-success-300 bg-success-50 p-6">
+                <h3 className="text-center text-2xl font-black text-success-700">Xuất sắc!</h3>
+                <div className="mt-4 space-y-2 text-center">
+                  <p className="text-sm font-medium text-neutral-600">Bạn nói:</p>
+                  <p className="text-xl font-bold text-success-700">"{transcript}"</p>
+                  <p className="text-sm font-medium text-neutral-600">Đáp án:</p>
+                  <p className="text-lg font-semibold text-neutral-800">"{question.answer}"</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => onNext(true, transcript)}
-                className="min-h-14 w-full rounded-xl bg-success-600 px-4 py-4 font-bold text-white transition-all hover:bg-success-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-500"
+                className="w-full rounded-xl bg-success-600 px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-success-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-300"
               >
-                Tiếp theo
+                Tiếp theo →
               </button>
             </div>
           )}
 
           {status === "incorrect" && (
-            <div className="w-full space-y-6 text-left">
-              <h3 className="text-xl font-bold text-error-700">Chưa khớp</h3>
-              {retryCount > 0 && <p className="text-sm font-medium text-neutral-500">Số lần thử sai: {retryCount}</p>}
-              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-neutral-700">
-                <p>
-                  Bạn nói: <span className="font-bold text-error-700">"{transcript || "Không rõ"}"</span>
-                </p>
-                <p>
-                  Đáp án: <span className="font-bold text-neutral-900">"{question.answer}"</span>
-                </p>
+            <div className="space-y-6">
+              <div className="text-center text-6xl">😐</div>
+              <div className="rounded-xl border-2 border-error-300 bg-error-50 p-6">
+                <h3 className="text-center text-xl font-bold text-error-700">Chưa chính xác</h3>
+                {retryCount > 0 && (
+                  <p className="mt-2 text-center text-sm font-medium text-neutral-500">
+                    Lần thử: {retryCount + 1}
+                  </p>
+                )}
+                <div className="mt-4 space-y-2 text-center">
+                  <p className="text-sm font-medium text-neutral-600">Bạn nói:</p>
+                  <p className="text-xl font-bold text-error-700">"{transcript || "Không rõ"}"</p>
+                  <p className="text-sm font-medium text-neutral-600">Đáp án đúng:</p>
+                  <p className="text-lg font-semibold text-neutral-800">"{question.answer}"</p>
+                </div>
               </div>
               {contentData.hint && (
-                <div className="rounded-lg border border-warning-200 bg-warning-50 p-4 text-warning-800">
-                  {contentData.hint}
+                <div className="rounded-xl border-2 border-primary-200 bg-primary-50 p-4 text-center">
+                  <p className="text-sm font-semibold text-primary-800">💡 {contentData.hint}</p>
                 </div>
               )}
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={startRecording}
-                  className="min-h-14 flex-1 rounded-xl border-2 border-primary-200 bg-primary-50 px-4 py-4 font-bold text-primary-700 transition-all hover:bg-primary-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+                  className="rounded-xl border-2 border-primary-300 bg-primary-50 px-6 py-4 font-bold text-primary-700 transition-colors hover:bg-primary-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300"
                 >
-                  Thử lại
+                  🔄 Thử lại
                 </button>
                 <button
                   type="button"
                   onClick={() => onNext(false, transcript)}
-                  className="min-h-14 flex-1 rounded-xl px-4 py-4 font-bold text-neutral-600 transition-all hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+                  className="rounded-xl border-2 border-neutral-300 bg-white px-6 py-4 font-bold text-neutral-600 transition-colors hover:bg-neutral-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-300"
                 >
-                  Bỏ qua
+                  Bỏ qua →
                 </button>
               </div>
             </div>
@@ -629,88 +684,123 @@ function MinimalPairsQuestion({
   const canCheck = statuses[0] === "recorded" && statuses[1] === "recorded";
 
   return (
-    <div className="mx-auto w-full max-w-4xl rounded-xl bg-neutral-950 p-6 text-neutral-200 shadow-sm">
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold uppercase tracking-widest text-white">Minimal pairs</h2>
-        <p className="mt-2 text-neutral-400">{question.name || "Đọc lần lượt hai từ"}</p>
-      </div>
-
-      {errorMessage && (
-        <div className="mb-6 rounded-lg border border-warning-300 bg-warning-50 p-4 text-sm font-bold text-warning-800" role="alert">
-          {errorMessage}
-        </div>
-      )}
-
-      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-        {pairs.map((pair, index) => (
-          <div key={`${pair.word}-${index}`} className="rounded-lg border border-neutral-700 p-6 text-center">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Từ số {index + 1}</p>
-            <h3 className="text-3xl font-bold uppercase text-white">{pair.word}</h3>
-            {pair.ipa && <p className="mt-2 font-ipa text-xl text-neutral-400">{pair.ipa}</p>}
-            <div className="mt-5">
-              <AudioButton audioUrl={pair.audioUrl} label="Nghe mẫu" dark />
-            </div>
-            <button
-              type="button"
-              onClick={() => startRecording(index)}
-              disabled={statuses[index] === "recording"}
-              className="mt-5 min-h-12 w-full rounded-lg border border-neutral-600 px-4 py-3 font-bold text-neutral-200 transition-colors hover:border-white hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 disabled:cursor-wait disabled:opacity-70"
-            >
-              {statuses[index] === "recording" ? "Đang nghe..." : statuses[index] === "recorded" ? "Ghi âm lại" : "Bấm để nói"}
-            </button>
-            {statuses[index] === "recorded" && (
-              <p className="mt-4 text-sm text-neutral-400">
-                Bạn đọc: <span className="text-white">"{transcripts[index]}"</span>
-              </p>
-            )}
+    <div className="mx-auto w-full max-w-5xl">
+      <div className="rounded-2xl border-2 border-warning-400 bg-gradient-to-br from-warning-50 via-white to-neutral-50 p-8 shadow-lg">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="mb-3 inline-block rounded-full bg-warning-100 px-5 py-2 text-sm font-bold uppercase tracking-wider text-warning-800">
+            ⚔️ Thử thách kép
           </div>
-        ))}
-      </div>
+          <h2 className="text-3xl font-black uppercase tracking-widest text-neutral-900">Minimal Pairs</h2>
+          <p className="mt-3 text-lg text-neutral-600">{question.name || "Đọc lần lượt hai từ"}</p>
+        </div>
 
-      {overallStatus === "idle" || overallStatus === "processing" ? (
-        <button
-          type="button"
-          onClick={checkBothAnswers}
-          disabled={!canCheck || overallStatus === "processing"}
-          className="min-h-14 w-full rounded-lg border border-neutral-600 px-4 py-4 font-bold uppercase tracking-widest text-neutral-200 transition-colors hover:border-white hover:bg-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {overallStatus === "processing" ? "Đang kiểm tra" : "Kiểm tra"}
-        </button>
-      ) : overallStatus === "correct" ? (
-        <div className="space-y-5 text-center">
-          <h3 className="text-2xl font-bold text-success-400">Xuất sắc</h3>
+        {errorMessage && (
+          <div className="mb-6 rounded-xl border-2 border-warning-400 bg-warning-50 p-5 text-center font-bold text-warning-800" role="alert">
+            ⚠️ {errorMessage}
+          </div>
+        )}
+
+        {/* Two words grid */}
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+          {pairs.map((pair, index) => (
+            <div key={`${pair.word}-${index}`} className="group relative overflow-hidden rounded-xl border-2 border-warning-200 bg-gradient-to-br from-white to-warning-50 p-8 transition-all hover:border-warning-400 hover:shadow-xl">
+              {/* Word number badge */}
+              <div className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-warning-100 text-lg font-black text-warning-700 group-hover:bg-warning-500 group-hover:text-white">
+                {index + 1}
+              </div>
+
+              {/* Word content */}
+              <div className="mb-6 text-center">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Từ số {index + 1}</p>
+                <h3 className="text-5xl font-black uppercase tracking-tight text-neutral-900">{pair.word}</h3>
+                {pair.ipa && <p className="mt-3 font-ipa text-2xl text-warning-600">{pair.ipa}</p>}
+              </div>
+
+              {/* Audio button */}
+              <div className="mb-5 flex justify-center">
+                <AudioButton audioUrl={pair.audioUrl} label="🔊 Nghe mẫu" />
+              </div>
+
+              {/* Recording button */}
+              <button
+                type="button"
+                onClick={() => startRecording(index)}
+                disabled={statuses[index] === "recording"}
+                className={`w-full rounded-xl border-2 px-6 py-4 font-bold uppercase tracking-wider transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-500 disabled:cursor-wait disabled:opacity-70 ${
+                  statuses[index] === "recorded"
+                    ? "border-success-500 bg-success-500 text-white hover:bg-success-600"
+                    : statuses[index] === "recording"
+                    ? "animate-pulse border-error-500 bg-error-500 text-white"
+                    : "border-warning-300 bg-warning-100 text-warning-800 hover:border-warning-500 hover:bg-warning-200"
+                }`}
+              >
+                {statuses[index] === "recording" ? "🎤 Đang nghe..." : statuses[index] === "recorded" ? "✓ Ghi lại" : "🎤 Bấm để nói"}
+              </button>
+
+              {/* Transcript display */}
+              {statuses[index] === "recorded" && (
+                <div className="mt-4 rounded-lg border border-success-200 bg-success-50 p-3 text-center">
+                  <p className="text-xs font-semibold text-neutral-600">Bạn đã đọc:</p>
+                  <p className="mt-1 text-lg font-bold text-success-700">"{transcripts[index]}"</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Check button or results */}
+        {overallStatus === "idle" || overallStatus === "processing" ? (
           <button
             type="button"
-            onClick={() => onNext(true, combinedTranscript)}
-            className="min-h-12 rounded-lg border border-success-400 px-8 py-3 font-bold text-success-400 transition-colors hover:bg-success-400 hover:text-neutral-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-500"
+            onClick={checkBothAnswers}
+            disabled={!canCheck || overallStatus === "processing"}
+            className="w-full rounded-xl border-2 border-warning-500 bg-warning-500 px-8 py-5 text-xl font-black uppercase tracking-widest text-white transition-all hover:bg-warning-600 hover:shadow-lg focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Chuyển tiếp
+            {overallStatus === "processing" ? "⏳ Đang kiểm tra..." : canCheck ? "✓ Kiểm tra kết quả" : "⚠️ Hãy đọc cả 2 từ"}
           </button>
-        </div>
-      ) : (
-        <div className="space-y-5 text-center">
-          <h3 className="text-2xl font-bold text-error-400">Chưa chính xác</h3>
-          <p className="text-sm text-neutral-400">
-            Đáp án cần đạt: {pairs[0].word} {pairs[1].word}
-          </p>
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+        ) : overallStatus === "correct" ? (
+          <div className="space-y-6 text-center">
+            <div className="text-7xl">🎉</div>
+            <h3 className="text-3xl font-black text-success-600">Xuất sắc!</h3>
+            <p className="text-neutral-600">Bạn đã phân biệt đúng 2 từ</p>
             <button
               type="button"
-              onClick={() => setOverallStatus("idle")}
-              className="min-h-12 rounded-lg border border-primary-400 px-6 py-3 font-bold text-primary-300 transition-colors hover:bg-primary-400 hover:text-neutral-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+              onClick={() => onNext(true, combinedTranscript)}
+              className="rounded-xl border-2 border-success-500 bg-success-500 px-10 py-4 text-lg font-bold text-white transition-all hover:bg-success-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-300"
             >
-              Làm lại
-            </button>
-            <button
-              type="button"
-              onClick={() => onNext(false, combinedTranscript)}
-              className="min-h-12 rounded-lg border border-neutral-600 px-6 py-3 font-bold text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
-            >
-              Bỏ qua
+              Tiếp theo →
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-6 text-center">
+            <div className="text-6xl">😐</div>
+            <h3 className="text-2xl font-black text-error-600">Chưa chính xác</h3>
+            <div className="rounded-xl border-2 border-error-300 bg-error-50 p-5">
+              <p className="text-sm font-semibold text-neutral-600">Đáp án đúng:</p>
+              <p className="mt-2 text-xl font-bold text-neutral-900">
+                {pairs[0].word} & {pairs[1].word}
+              </p>
+            </div>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setOverallStatus("idle")}
+                className="rounded-xl border-2 border-primary-400 bg-primary-500 px-8 py-4 font-bold text-white transition-all hover:bg-primary-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300"
+              >
+                🔄 Làm lại
+              </button>
+              <button
+                type="button"
+                onClick={() => onNext(false, combinedTranscript)}
+                className="rounded-xl border-2 border-neutral-300 bg-white px-8 py-4 font-bold text-neutral-600 transition-all hover:bg-neutral-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-300"
+              >
+                Bỏ qua →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -963,32 +1053,27 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
   const isVoiceTask = currentQuestion?.type === "qtype-2-voice" || currentQuestion?.type === "qtype-3-minimal-pairs";
 
   return (
-    <div className={`flex min-h-screen flex-col ${isVoiceTask ? "bg-neutral-950" : "bg-neutral-50"}`}>
-      <header
-        className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-4 transition-colors sm:px-6 ${
-          isVoiceTask ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-white"
-        }`}
-      >
+    <div className="flex min-h-screen flex-col bg-neutral-50">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 transition-colors sm:px-6">
+
         <button
           type="button"
           onClick={() => router.back()}
           aria-label="Quay lại trang trước"
-          className={`rounded-lg p-2 text-xl font-bold transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 ${
-            isVoiceTask ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"
-          }`}
+          className="rounded-lg p-2 text-xl font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
         >
           X
         </button>
         <div className="mx-4 max-w-2xl flex-1">
           <ProgressBar value={progressPercent} max={100} size="lg" showPercentage={false} label={`Câu ${currentIndex + 1}/${questions.length}`} />
         </div>
-        <div className={`min-w-16 text-right font-bold ${isVoiceTask ? "text-neutral-300" : "text-neutral-700"}`} aria-label={`Điểm hiện tại ${score}`}>
+        <div className="min-w-16 text-right font-bold text-neutral-700" aria-label={`Điểm hiện tại ${score}`}>
           {score} điểm
         </div>
       </header>
 
       <main className="mx-auto mt-10 flex w-full max-w-4xl flex-1 flex-col p-4 sm:p-6">
-        <div className={`mb-10 text-center text-sm font-bold uppercase tracking-wider ${isVoiceTask ? "text-neutral-500" : "text-neutral-400"}`}>
+        <div className="mb-10 text-center text-sm font-bold uppercase tracking-wider text-neutral-400">
           Câu {currentIndex + 1} / {questions.length}
         </div>
 

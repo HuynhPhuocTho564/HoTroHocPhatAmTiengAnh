@@ -117,3 +117,22 @@ Can doc:
 Ly do:
 
 - Can chot validation, demo scenario va giai thich logic nghiep vu khi bao ve.
+
+## Lesson Catalog va Seed Bai Hoc IPA
+
+Ap dung khi code theo `PLAN/02_Database_And_Data/LESSON_CODING_PLAN.md`.
+
+Can doc:
+
+- `ipa-pronunciation-pedagogy`
+- `question-bank-curator`
+- `project-quality-gate`
+- `postgresql_expert` neu sua Prisma schema hoac seed pipeline can doi schema
+- `hci_consultant` va `accessibility` neu sua UI learning map/exercise engine
+
+Ly do:
+
+- Bai hoc IPA can dung thu tu su pham: nghe -> nhan dien -> doc tu -> doc cap -> doc cau.
+- Question bank can co source/review/status metadata, khong dua item chua duyet thanh `ACTIVE`.
+- Chu de 4 la tong hop kho, khong phai day am moi; can tranh tron qua nhieu contrast trong bai beginner.
+- Sau khi seed/code phai validate Prisma, typecheck, test va build.

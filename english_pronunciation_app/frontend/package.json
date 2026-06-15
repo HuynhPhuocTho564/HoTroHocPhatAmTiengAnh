@@ -8,7 +8,8 @@
     "build": "next build",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed:lessons": "tsx prisma/seed_lessons.ts"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +37,6 @@
     "typescript": "^6.0.3"
   },
   "prisma": {
-    "seed": "tsx prisma/seed_real.ts"
+    "seed": "tsx prisma/seed_lessons.ts"
   }
 }

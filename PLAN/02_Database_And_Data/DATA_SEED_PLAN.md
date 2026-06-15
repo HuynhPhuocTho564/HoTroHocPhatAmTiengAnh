@@ -6,6 +6,11 @@ Ngay chot: 14/06/2026
 
 Chon Cach B: tao kho du lieu trong database thay vi chi dung file seed tinh.
 
+Cap nhat 15/06/2026:
+
+- Ke hoach code bai hoc theo 4 chu de, 25 nhom am va toi da 100 bai da duoc tach rieng tai `PLAN/02_Database_And_Data/LESSON_CODING_PLAN.md`.
+- Khi bat dau code seed bai hoc, uu tien doc file nay cung voi `LESSON_CODING_PLAN.md`.
+
 Ly do:
 
 - Admin sau nay co the quan ly tu, cap tu, audio, IPA va cau hoi.

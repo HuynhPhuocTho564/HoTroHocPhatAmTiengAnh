@@ -10,7 +10,7 @@ export default async function LearningMapPage() {
   const [topicsDB, bestAttempts] = await Promise.all([
     prisma.topic.findMany({
       orderBy: {
-        name: "asc",
+        id: "asc", // Sort by ID to get topic-1, topic-2, topic-3, topic-4 order
       },
       include: {
         exercises: {
@@ -81,10 +81,24 @@ export default async function LearningMapPage() {
       });
     }
 
-    const maps = Array.from(mapsById.values()).sort((first, second) => first.name.localeCompare(second.name));
+    const maps = Array.from(mapsById.values()).sort((first, second) => {
+      // Sort by map ID which follows pattern: map-t1-g01-..., map-t1-g02-..., etc.
+      // This ensures sound groups are sorted by their orderIndex
+      return first.id.localeCompare(second.id);
+    });
 
     for (const map of maps) {
-      map.exercises.sort((first, second) => first.name.localeCompare(second.name));
+      map.exercises.sort((first, second) => {
+        // Sort by exercise mode order: listen_choose (1), speak_word (2), speak_minimal_pair (3), speak_sentence (4)
+        const getModeOrder = (id: string) => {
+          if (id.includes("listen_choose")) return 1;
+          if (id.includes("speak_word")) return 2;
+          if (id.includes("speak_minimal_pair")) return 3;
+          if (id.includes("speak_sentence")) return 4;
+          return 5;
+        };
+        return getModeOrder(first.id) - getModeOrder(second.id);
+      });
     }
 
     return {

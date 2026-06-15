@@ -8,6 +8,7 @@ Muc tieu la tach tai lieu quan ly ra khoi ma nguon runtime de sau nay de kiem tr
 - `00_Project_Context/`: boi canh du an, hien trang he thong, de cuong va dac ta tong quan.
 - `01_Roadmap/`: lo trinh, PDCA, API contract, kich ban demo, ke hoach thuc hien va cac de xuat cai tien.
 - `02_Database_And_Data/`: ke hoach du lieu, kho cau hoi, bai tap IPA, ghi chu ap dung Ship or Sheep va cac tai lieu lien quan schema/database.
+  - `LESSON_CODING_PLAN.md`: ke hoach code 4 chu de IPA, 25 nhom am, 100 bai va seed pipeline.
 - `03_UI_UX/`: color system, UI component guide, audit HCI/accessibility.
 - `04_Features/`: tai lieu tinh nang nhu admin, daily check-in, streak/gamification.
 - `05_AI_Skills/`: prompt/huong dan lam viec voi AI va kiem ke cac skill hien co.
