@@ -23,6 +23,31 @@ export default function RegisterForm({ googleEnabled }: RegisterFormProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailValid, setEmailValid] = useState(false);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = event.target.value;
+    setEmail(newEmail);
+    
+    if (newEmail.length > 0) {
+      if (!validateEmail(newEmail)) {
+        setEmailError("Email không hợp lệ");
+        setEmailValid(false);
+      } else {
+        setEmailError("");
+        setEmailValid(true);
+      }
+    } else {
+      setEmailError("");
+      setEmailValid(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -67,18 +92,23 @@ export default function RegisterForm({ googleEnabled }: RegisterFormProps) {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isGoogleLoading || isLoading}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-3 rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm font-bold text-neutral-800 transition-colors hover:bg-neutral-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:hover:bg-neutral-800 dark:focus-visible:ring-offset-neutral-900"
+          className="group relative inline-flex min-h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 text-sm font-bold text-neutral-800 shadow-sm transition-all duration-200 hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:border-neutral-600 dark:hover:bg-neutral-800 dark:focus-visible:ring-offset-neutral-900"
         >
-          <GoogleMark />
-          {isGoogleLoading ? "Đang chuyển sang Google..." : "Đăng ký với Google"}
+          <span className="relative z-10 flex items-center gap-3">
+            <GoogleMark />
+            {isGoogleLoading ? "Đang chuyển sang Google..." : "Đăng ký với Google"}
+          </span>
+          <div className="absolute inset-0 -z-0 bg-gradient-to-r from-transparent via-neutral-100/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 dark:via-neutral-700/30" />
         </button>
       )}
 
       {googleEnabled && (
-        <div className="flex items-center gap-3" aria-hidden="true">
-          <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">hoặc</span>
-          <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+        <div className="relative flex items-center gap-3 py-3" aria-hidden="true">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-neutral-300 to-neutral-300 dark:via-neutral-600 dark:to-neutral-600" />
+          <span className="rounded-full bg-neutral-100 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+            hoặc đăng ký bằng email
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-neutral-300 to-neutral-300 dark:via-neutral-600 dark:to-neutral-600" />
         </div>
       )}
 
@@ -104,7 +134,7 @@ export default function RegisterForm({ googleEnabled }: RegisterFormProps) {
               required
               minLength={3}
               aria-describedby="username-help"
-              className="block min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base text-neutral-950 outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-600 focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
+              className="block min-h-12 w-full rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 text-base text-neutral-950 shadow-sm outline-none transition-all duration-200 placeholder:text-neutral-400 hover:border-neutral-400 focus:border-primary-500 focus:shadow-md focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:hover:border-neutral-600 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
               placeholder="Ví dụ: Minh Anh"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
@@ -118,17 +148,37 @@ export default function RegisterForm({ googleEnabled }: RegisterFormProps) {
             <label className="text-sm font-bold text-neutral-800 dark:text-neutral-100" htmlFor="email">
               Email
             </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="block min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base text-neutral-950 outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-600 focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
-              placeholder="ban@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
+            <div className="relative">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="block min-h-12 w-full rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 pr-12 text-base text-neutral-950 shadow-sm outline-none transition-all duration-200 placeholder:text-neutral-400 hover:border-neutral-400 focus:border-primary-500 focus:shadow-md focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:hover:border-neutral-600 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
+                placeholder="ban@example.com"
+                value={email}
+                onChange={handleEmailChange}
+              />
+              {email.length > 0 && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {emailValid ? (
+                    <svg className="h-5 w-5 text-success-600 dark:text-success-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-error-600 dark:text-error-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              )}
+            </div>
+            {emailError && (
+              <p className="text-xs leading-5 text-error-600 dark:text-error-400">
+                {emailError}
+              </p>
+            )}
           </div>
 
           <PasswordInput
@@ -141,20 +191,31 @@ export default function RegisterForm({ googleEnabled }: RegisterFormProps) {
             placeholder="Tối thiểu 6 ký tự"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            helpText="Mật khẩu chỉ dùng cho đăng nhập bằng email. Google sẽ tạo tài khoản riêng từ email Google."
+            helpText="Mật khẩu chỉ dùng cho đăng nhập bằng email. Đăng ký bằng Google không cần mật khẩu."
           />
         </div>
 
-        <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-          Bằng việc bấm đăng ký, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của PhatAmEN.
-        </p>
+        <div className="rounded-lg border border-primary-200 bg-primary-50 p-4 dark:border-primary-900 dark:bg-primary-950/30">
+          <p className="text-xs leading-5 text-neutral-700 dark:text-neutral-300">
+            Bằng việc bấm đăng ký, bạn đồng ý với{" "}
+            <Link href="/terms" className="font-bold text-primary-700 underline decoration-primary-300 underline-offset-2 transition-colors hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200">
+              Điều khoản dịch vụ
+            </Link>
+            {" "}và{" "}
+            <Link href="/privacy" className="font-bold text-primary-700 underline decoration-primary-300 underline-offset-2 transition-colors hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200">
+              Chính sách bảo mật
+            </Link>
+            {" "}của PhatAmEN.
+          </p>
+        </div>
 
         <button
           type="submit"
           disabled={isLoading || isGoogleLoading}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-neutral-900"
+          className="group relative inline-flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition-all duration-200 hover:scale-[1.02] hover:from-primary-700 hover:to-primary-800 hover:shadow-xl hover:shadow-primary-500/40 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 dark:focus-visible:ring-offset-neutral-900"
         >
-          {isLoading ? "Đang xử lý..." : "Đăng ký"}
+          <span className="relative z-10">{isLoading ? "Đang xử lý..." : "Đăng ký"}</span>
+          <div className="absolute inset-0 -z-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         </button>
       </form>
 

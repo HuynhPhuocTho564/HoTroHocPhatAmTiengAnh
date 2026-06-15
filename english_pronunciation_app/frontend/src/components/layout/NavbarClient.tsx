@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import SignOutButton from "./SignOutButton";
-import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export type NavbarLink = {
   href: string;
@@ -93,8 +92,6 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
             {!isAuthPage && <div className="hidden flex-1 md:flex" aria-hidden="true" />}
 
             <div className="hidden items-center gap-3 md:flex">
-              <ThemeToggle compact={isAuthPage} />
-
               {!isAuthPage && (
                 <>
                   {isAdmin && (
@@ -145,7 +142,6 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
             </div>
 
             <div className="flex items-center gap-2 md:hidden">
-              <ThemeToggle compact />
               {!isAuthPage && (
                 <button
                   type="button"

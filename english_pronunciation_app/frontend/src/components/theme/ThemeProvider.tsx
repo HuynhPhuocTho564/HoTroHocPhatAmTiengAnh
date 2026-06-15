@@ -31,39 +31,17 @@ function applyTheme(theme: "light" | "dark") {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  // Force light mode only - no switching allowed
+  const [mode] = useState<ThemeMode>("light");
+  const [resolvedTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const initialMode = getStoredMode();
-    const initialTheme = initialMode === "system" ? getSystemTheme() : initialMode;
-
-    setModeState(initialMode);
-    setResolvedTheme(initialTheme);
-    applyTheme(initialTheme);
+    // Force light theme on mount
+    applyTheme("light");
   }, []);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const syncSystemTheme = () => {
-      if (mode !== "system") return;
-      const nextTheme = getSystemTheme();
-      setResolvedTheme(nextTheme);
-      applyTheme(nextTheme);
-    };
-
-    mediaQuery.addEventListener("change", syncSystemTheme);
-    return () => mediaQuery.removeEventListener("change", syncSystemTheme);
-  }, [mode]);
-
-  const setMode = (nextMode: ThemeMode) => {
-    const nextTheme = nextMode === "system" ? getSystemTheme() : nextMode;
-
-    window.localStorage.setItem(STORAGE_KEY, nextMode);
-    setModeState(nextMode);
-    setResolvedTheme(nextTheme);
-    applyTheme(nextTheme);
+  const setMode = () => {
+    // Do nothing - theme is locked to light mode
   };
 
   const value = useMemo(

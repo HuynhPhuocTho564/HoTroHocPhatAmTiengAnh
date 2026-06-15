@@ -76,14 +76,14 @@ export default function PasswordInput({
           minLength={minLength}
           aria-describedby={helpId}
           aria-invalid={hasError || undefined}
-          className="block min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 pr-12 text-base text-neutral-950 outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-600 focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
+          className="block min-h-12 w-full rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 pr-12 text-base text-neutral-950 shadow-sm outline-none transition-all duration-200 placeholder:text-neutral-400 hover:border-neutral-400 focus:border-primary-500 focus:shadow-md focus:ring-4 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 dark:placeholder:text-neutral-500 dark:hover:border-neutral-600 dark:focus:border-primary-400 dark:focus:ring-primary-900/50 sm:text-sm"
           placeholder={placeholder}
           value={value}
           onChange={onChange}
         />
         <button
           type="button"
-          className="absolute right-1.5 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          className="absolute right-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/50 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
           aria-label={isVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
           aria-pressed={isVisible}
           onClick={() => setIsVisible((current) => !current)}

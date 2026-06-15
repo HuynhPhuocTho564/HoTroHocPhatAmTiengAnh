@@ -19,17 +19,10 @@ export const metadata: Metadata = {
 
 const themeInitScript = `
   (function () {
-    try {
-      var stored = localStorage.getItem("phatamen-theme");
-      var mode = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
-      var theme = mode === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.classList.toggle("dark", theme === "dark");
-      document.documentElement.style.colorScheme = theme;
-    } catch (error) {
-      document.documentElement.dataset.theme = "light";
-      document.documentElement.style.colorScheme = "light";
-    }
+    // Force light mode only
+    document.documentElement.dataset.theme = "light";
+    document.documentElement.classList.remove("dark");
+    document.documentElement.style.colorScheme = "light";
   })();
 `;
 
