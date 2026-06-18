@@ -103,6 +103,11 @@ export default function SpeakSentenceQuestion({ question, onNext }: SpeakSentenc
 
         {/* Câu ẩn (toggle) */}
         <div className="mb-6 text-center">
+          {contentData.ipa && (
+            <p className="mb-3 font-ipa text-2xl font-bold text-accent-600">
+              {contentData.ipa}
+            </p>
+          )}
           <p className="text-xl font-bold leading-relaxed text-neutral-900">
             {showSentence ? question.answer : maskedSentence}
           </p>

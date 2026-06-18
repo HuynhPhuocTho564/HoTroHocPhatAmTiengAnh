@@ -47,6 +47,7 @@ export type SentenceItemData = {
   targetWords: string[];
   targetPhonemes: string[];
   difficulty: number;
+  ipa?: string;
   audioUrl?: string;
   translation?: string;
   status: "ACTIVE" | "DRAFT" | "NEEDS_REVIEW";
@@ -205,6 +206,7 @@ export const SENTENCES_T1_G01: SentenceItemData[] = [
     targetWords: ["sheep", "ship"],
     targetPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 4,
+    ipa: "/ðə ˈʃiːp ə ɒn ðə ˈʃɪp/",
     translation: "Những con cừu ở trên con tàu.",
     status: "ACTIVE",
     sourceType: "MANUAL",
@@ -216,6 +218,7 @@ export const SENTENCES_T1_G01: SentenceItemData[] = [
     targetWords: ["feel", "sick", "sit"],
     targetPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 5,
+    ipa: "/aɪ ˈfiːl sɪk wen aɪ sɪt hɪə/",
     translation: "Tôi cảm thấy ốm khi ngồi ở đây.",
     status: "ACTIVE",
     sourceType: "MANUAL",
@@ -226,6 +229,7 @@ export const SENTENCES_T1_G01: SentenceItemData[] = [
     targetWords: ["seat", "sit"],
     targetPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 4,
+    ipa: "/pliːz ˈteɪk jə siːt ən sɪt ˈdaʊn/",
     translation: "Xin hãy lấy chỗ ngồi và ngồi xuống.",
     status: "ACTIVE",
     sourceType: "MANUAL",
@@ -236,6 +240,7 @@ export const SENTENCES_T1_G01: SentenceItemData[] = [
     targetWords: ["heat", "hit"],
     targetPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 4,
+    ipa: "/ðə hiːt wɪl hɪt əs ˈsuːn/",
     status: "ACTIVE",
     sourceType: "MANUAL",
   },

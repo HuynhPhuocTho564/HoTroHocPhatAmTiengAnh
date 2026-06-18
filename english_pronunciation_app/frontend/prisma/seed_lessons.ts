@@ -598,6 +598,7 @@ async function seedQuestionBankItems() {
       const contentJson = {
         mode: "speak_sentence",
         sentence: sent.sentence,
+        ipa: sent.ipa ?? undefined,
         targetWords: sent.targetWords,
         targetPhonemes: sent.targetPhonemes,
         hint: sent.translation ?? undefined,
@@ -1051,6 +1052,7 @@ async function generateQuestions() {
           const contentJson = JSON.stringify({
             mode: "speak_sentence",
             word: sentence, // VoiceQuestion dùng contentData.word cho fallback, nhưng sentence mode dùng question.answer
+            ipa: (bankContent.ipa as string) ?? undefined,
             audioUrl: bankContent.audioUrl ?? undefined,
             hint: bankContent.hint ?? undefined,
           });

@@ -94,3 +94,12 @@ test("mỗi word CĐ2 có soundGroupId khớp + targetPhonemes + ipa bắt đầ
 test("tổng số nhóm có content >= 22 (12 CD1 + 2 legacy CD3 + 12 CD2)", () => {
   assert.ok(Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length >= 22, `Ít nhất 22 nhóm content (hiện ${Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length})`);
 });
+
+test("pilot nhóm map-t1-g01-i-ih: mỗi sentence có ipa RP (bắt đầu /)", () => {
+  const content = getContentBySoundGroup("map-t1-g01-i-ih");
+  assert.ok(content, "nhóm map-t1-g01-i-ih phải có content");
+  for (const sent of content!.sentences) {
+    assert.ok(sent.ipa, `sentence "${sent.sentence}" thiếu ipa`);
+    assert.ok(sent.ipa!.startsWith("/"), `ipa "${sent.ipa}" phải bắt đầu bằng /`);
+  }
+});
