@@ -833,6 +833,199 @@ export const SENTENCES_T4_G03: SentenceItemData[] = [
 ];
 
 // ============================================================================
+// TOPIC 1 - NHÓM 3: /ɑː/ & /ʌ/ & /ə/ (father/fun/about) - NHÓM TRUNG TÂM
+// ============================================================================
+
+export const WORDS_T1_G03_CENTRAL: WordItemData[] = [
+  { word: "father", ipa: "/ˈfɑːðə/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ɑː/"], difficulty: 5, exampleSentence: "My father is a teacher.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ɑː/ dài, miệng mở rộng" },
+  { word: "fun", ipa: "/fʌn/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ʌ/"], difficulty: 4, exampleSentence: "We had fun at the party.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ʌ/ ngắn, lỏng" },
+  { word: "car", ipa: "/kɑː/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ɑː/"], difficulty: 4, exampleSentence: "The car is red.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "cup", ipa: "/kʌp/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ʌ/"], difficulty: 3, exampleSentence: "I need a cup of tea.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "about", ipa: "/əˈbaʊt/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ə/"], difficulty: 5, exampleSentence: "Tell me about your day.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ə/ schwa yếu, không nhấn" },
+  { word: "sofa", ipa: "/ˈsəʊfə/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ə/"], difficulty: 5, exampleSentence: "The sofa is comfortable.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "heart", ipa: "/hɑːt/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ɑː/"], difficulty: 5, exampleSentence: "My heart beats fast.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "but", ipa: "/bʌt/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ʌ/"], difficulty: 3, exampleSentence: "I want to go but I'm tired.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "ago", ipa: "/əˈɡəʊ/", soundGroupId: "map-t1-g03-central", targetPhonemes: ["/ə/"], difficulty: 5, exampleSentence: "It happened long ago.", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G03: MinimalPairData[] = [
+  { word1: "father", ipa1: "/ˈfɑːðə/", word2: "fun", ipa2: "/fʌn/", soundGroupId: "map-t1-g03-central", contrastPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 5, explanation: "/ɑː/ dài mở rộng, /ʌ/ ngắn lỏng", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Cặp trung tâm cơ bản" },
+  { word1: "car", ipa1: "/kɑː/", word2: "cup", ipa2: "/kʌp/", soundGroupId: "map-t1-g03-central", contrastPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 4, explanation: "Chú ý độ dài và hình dạng môi", status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "heart", ipa1: "/hɑːt/", word2: "hut", ipa2: "/hʌt/", soundGroupId: "map-t1-g03-central", contrastPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 5, explanation: "/ɑː/ kéo dài, /ʌ/ ngắn", status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "bath", ipa1: "/bɑːθ/", word2: "but", ipa2: "/bʌt/", soundGroupId: "map-t1-g03-central", contrastPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+export const SENTENCES_T1_G03: SentenceItemData[] = [
+  { sentence: "My father had fun in the car.", soundGroupId: "map-t1-g03-central", targetWords: ["father", "fun", "car"], targetPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu chứa cả 2 âm trung tâm" },
+  { sentence: "Tell me about the cup.", soundGroupId: "map-t1-g03-central", targetWords: ["about", "cup"], targetPhonemes: ["/ə/", "/ʌ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "My heart was cold but I had fun.", soundGroupId: "map-t1-g03-central", targetWords: ["heart", "but", "fun"], targetPhonemes: ["/ɑː/", "/ʌ/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 5: /ʊ/ & /uː/ (full/fool) - SAU NGẮN & SAU DÀI
+// ============================================================================
+
+export const WORDS_T1_G05_U_UH: WordItemData[] = [
+  { word: "full", ipa: "/fʊl/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/ʊ/"], difficulty: 3, exampleSentence: "The glass is full.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ʊ/ ngắn lỏng" },
+  { word: "fool", ipa: "/fuːl/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/uː/"], difficulty: 3, exampleSentence: "Don't be a fool.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/uː/ dài căng" },
+  { word: "pull", ipa: "/pʊl/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/ʊ/"], difficulty: 3, exampleSentence: "Pull the door open.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "pool", ipa: "/puːl/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/uː/"], difficulty: 3, exampleSentence: "The pool is clean.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "look", ipa: "/lʊk/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/ʊ/"], difficulty: 3, exampleSentence: "Look at the sky.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "food", ipa: "/fuːd/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/uː/"], difficulty: 3, exampleSentence: "The food is delicious.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "book", ipa: "/bʊk/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/ʊ/"], difficulty: 3, exampleSentence: "I read a book.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "blue", ipa: "/bluː/", soundGroupId: "map-t1-g05-u-uh", targetPhonemes: ["/uː/"], difficulty: 4, exampleSentence: "The sky is blue.", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G05: MinimalPairData[] = [
+  { word1: "full", ipa1: "/fʊl/", word2: "fool", ipa2: "/fuːl/", soundGroupId: "map-t1-g05-u-uh", contrastPhonemes: ["/ʊ/", "/uː/"], difficulty: 3, explanation: "/ʊ/ ngắn lỏng, /uː/ dài căng môi", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Cặp sau cổ điển" },
+  { word1: "pull", ipa1: "/pʊl/", word2: "pool", ipa2: "/puːl/", soundGroupId: "map-t1-g05-u-uh", contrastPhonemes: ["/ʊ/", "/uː/"], difficulty: 3, explanation: "Chú ý độ dài", status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "look", ipa1: "/lʊk/", word2: "Luke", ipa2: "/luːk/", soundGroupId: "map-t1-g05-u-uh", contrastPhonemes: ["/ʊ/", "/uː/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "good", ipa1: "/ɡʊd/", word2: "food", ipa2: "/fuːd/", soundGroupId: "map-t1-g05-u-uh", contrastPhonemes: ["/ʊ/", "/uː/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+export const SENTENCES_T1_G05: SentenceItemData[] = [
+  { sentence: "The fool pulled the full bucket.", soundGroupId: "map-t1-g05-u-uh", targetWords: ["fool", "pulled", "full"], targetPhonemes: ["/uː/", "/ʊ/", "/ʊ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu chứa cả 2 âm sau" },
+  { sentence: "Look at the blue pool.", soundGroupId: "map-t1-g05-u-uh", targetWords: ["Look", "blue", "pool"], targetPhonemes: ["/ʊ/", "/uː/", "/uː/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "Good food in the book.", soundGroupId: "map-t1-g05-u-uh", targetWords: ["Good", "food", "book"], targetPhonemes: ["/ʊ/", "/uː/", "/ʊ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 6: /ɜː/ (bird/word) - ÂM GIỮA ĐẶC BIỆT (KHÔNG CẶP)
+// ============================================================================
+
+export const WORDS_T1_G06_ER: WordItemData[] = [
+  { word: "bird", ipa: "/bɜːd/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 6, exampleSentence: "The bird is singing.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ɜː/ không có trong tiếng Việt" },
+  { word: "word", ipa: "/wɜːd/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 5, exampleSentence: "Say each word clearly.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "nurse", ipa: "/nɜːs/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 6, exampleSentence: "The nurse is kind.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "girl", ipa: "/ɡɜːl/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 5, exampleSentence: "The girl is happy.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "work", ipa: "/wɜːk/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 5, exampleSentence: "I go to work early.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "learn", ipa: "/lɜːn/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 6, exampleSentence: "We learn English.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "turn", ipa: "/tɜːn/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 5, exampleSentence: "Turn left at the corner.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "her", ipa: "/hɜː/", soundGroupId: "map-t1-g06-er", targetPhonemes: ["/ɜː/"], difficulty: 4, exampleSentence: "Give her the book.", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+// g06 /ɜː/ không có cặp → MINIMAL_PAIRS_T1_G06 rỗng
+export const MINIMAL_PAIRS_T1_G06: MinimalPairData[] = [];
+
+export const SENTENCES_T1_G06: SentenceItemData[] = [
+  { sentence: "The nurse learns to work with the bird.", soundGroupId: "map-t1-g06-er", targetWords: ["nurse", "learns", "work", "bird"], targetPhonemes: ["/ɜː/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Nhiều từ /ɜː/ trong 1 câu" },
+  { sentence: "The girl turned to her word.", soundGroupId: "map-t1-g06-er", targetWords: ["girl", "turned", "her", "word"], targetPhonemes: ["/ɜː/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "Learn to work hard.", soundGroupId: "map-t1-g06-er", targetWords: ["Learn", "work"], targetPhonemes: ["/ɜː/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 7: /eɪ/ & /aɪ/ (day/die) - KẾT THÚC BẰNG /ɪ/
+// ============================================================================
+
+export const WORDS_T1_G07_EI_AI: WordItemData[] = [
+  { word: "day", ipa: "/deɪ/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/eɪ/"], difficulty: 3, exampleSentence: "Have a nice day.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/eɪ/ trượt từ /e/ lên /ɪ/" },
+  { word: "die", ipa: "/daɪ/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/aɪ/"], difficulty: 3, exampleSentence: "The plant will die.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/aɪ/ trượt từ /a/ lên /ɪ/" },
+  { word: "make", ipa: "/meɪk/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/eɪ/"], difficulty: 3, exampleSentence: "Make a cake.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "my", ipa: "/maɪ/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/aɪ/"], difficulty: 2, exampleSentence: "My book is here.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "they", ipa: "/ðeɪ/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/eɪ/"], difficulty: 4, exampleSentence: "They are friends.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "thigh", ipa: "/θaɪ/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/aɪ/"], difficulty: 5, exampleSentence: "My thigh hurts.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "name", ipa: "/neɪm/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/eɪ/"], difficulty: 3, exampleSentence: "What is your name?", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "time", ipa: "/taɪm/", soundGroupId: "map-t1-g07-ei-ai", targetPhonemes: ["/aɪ/"], difficulty: 3, exampleSentence: "What time is it?", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G07: MinimalPairData[] = [
+  { word1: "day", ipa1: "/deɪ/", word2: "die", ipa2: "/daɪ/", soundGroupId: "map-t1-g07-ei-ai", contrastPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 3, explanation: "/eɪ/ từ /e/, /aɪ/ từ /a/ — cùng kết /ɪ/", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Cặp diphthong cơ bản" },
+  { word1: "make", ipa1: "/meɪk/", word2: "Mike", ipa2: "/maɪk/", soundGroupId: "map-t1-g07-ei-ai", contrastPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "they", ipa1: "/ðeɪ/", word2: "thigh", ipa2: "/θaɪ/", soundGroupId: "map-t1-g07-ei-ai", contrastPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "name", ipa1: "/neɪm/", word2: "time", ipa2: "/taɪm/", soundGroupId: "map-t1-g07-ei-ai", contrastPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+export const SENTENCES_T1_G07: SentenceItemData[] = [
+  { sentence: "Make my day with your name.", soundGroupId: "map-t1-g07-ei-ai", targetWords: ["Make", "my", "day", "name"], targetPhonemes: ["/eɪ/", "/aɪ/", "/eɪ/", "/eɪ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu chứa cả 2 diphthong" },
+  { sentence: "They had a good time.", soundGroupId: "map-t1-g07-ei-ai", targetWords: ["They", "time"], targetPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "My thigh hurts today.", soundGroupId: "map-t1-g07-ei-ai", targetWords: ["My", "thigh"], targetPhonemes: ["/aɪ/", "/aɪ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 8: /ɔɪ/ & /aʊ/ (boy/now) - /ɔɪ/ LÊN, /aʊ/ XUỐNG-LÊN
+// ============================================================================
+
+export const WORDS_T1_G08_OI_AU: WordItemData[] = [
+  { word: "boy", ipa: "/bɔɪ/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/ɔɪ/"], difficulty: 4, exampleSentence: "The boy is tall.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ɔɪ/ trượt từ /ɔ/ lên /ɪ/" },
+  { word: "now", ipa: "/naʊ/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/aʊ/"], difficulty: 3, exampleSentence: "Do it now.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/aʊ/ trượt từ /a/ tới /ʊ/" },
+  { word: "coin", ipa: "/kɔɪn/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/ɔɪ/"], difficulty: 4, exampleSentence: "I have a coin.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "house", ipa: "/haʊs/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/aʊ/"], difficulty: 3, exampleSentence: "My house is big.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "voice", ipa: "/vɔɪs/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/ɔɪ/"], difficulty: 5, exampleSentence: "Your voice is nice.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "mouse", ipa: "/maʊs/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/aʊ/"], difficulty: 3, exampleSentence: "The mouse is small.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "choice", ipa: "/tʃɔɪs/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/ɔɪ/"], difficulty: 5, exampleSentence: "Make your choice.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "out", ipa: "/aʊt/", soundGroupId: "map-t1-g08-oi-au", targetPhonemes: ["/aʊ/"], difficulty: 3, exampleSentence: "Go out and play.", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G08: MinimalPairData[] = [
+  { word1: "boy", ipa1: "/bɔɪ/", word2: "bow", ipa2: "/baʊ/", soundGroupId: "map-t1-g08-oi-au", contrastPhonemes: ["/ɔɪ/", "/aʊ/"], difficulty: 5, explanation: "/ɔɪ/ kết /ɪ/, /aʊ/ kết /ʊ/ — hướng khác nhau", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Cặp diphthong khác hướng" },
+  { word1: "coin", ipa1: "/kɔɪn/", word2: "count", ipa2: "/kaʊnt/", soundGroupId: "map-t1-g08-oi-au", contrastPhonemes: ["/ɔɪ/", "/aʊ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "voice", ipa1: "/vɔɪs/", word2: "vow", ipa2: "/vaʊ/", soundGroupId: "map-t1-g08-oi-au", contrastPhonemes: ["/ɔɪ/", "/aʊ/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "choice", ipa1: "/tʃɔɪs/", word2: "chouse", ipa2: "/tʃaʊs/", soundGroupId: "map-t1-g08-oi-au", contrastPhonemes: ["/ɔɪ/", "/aʊ/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "chouse là từ hiếm, dùng minh họa cặp" },
+];
+
+export const SENTENCES_T1_G08: SentenceItemData[] = [
+  { sentence: "The boy found a coin in the house.", soundGroupId: "map-t1-g08-oi-au", targetWords: ["boy", "coin", "house"], targetPhonemes: ["/ɔɪ/", "/ɔɪ/", "/aʊ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu chứa cả 2 diphthong" },
+  { sentence: "The mouse ran out of the house.", soundGroupId: "map-t1-g08-oi-au", targetWords: ["mouse", "out", "house"], targetPhonemes: ["/aʊ/", "/aʊ/", "/aʊ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "Make your choice with your voice.", soundGroupId: "map-t1-g08-oi-au", targetWords: ["choice", "voice"], targetPhonemes: ["/ɔɪ/", "/ɔɪ/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 9: /əʊ/ & /eə/ (go/air) - NHÓM TRUNG TÂM
+// ============================================================================
+
+export const WORDS_T1_G09_OU_EA: WordItemData[] = [
+  { word: "go", ipa: "/ɡəʊ/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/əʊ/"], difficulty: 3, exampleSentence: "Let's go home.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/əʊ/ trượt từ schwa tới /ʊ/" },
+  { word: "air", ipa: "/eə/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/eə/"], difficulty: 4, exampleSentence: "The air is fresh.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/eə/ trượt từ /e/ tới schwa" },
+  { word: "home", ipa: "/həʊm/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/əʊ/"], difficulty: 3, exampleSentence: "I go home.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "care", ipa: "/keə/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/eə/"], difficulty: 4, exampleSentence: "Take care of yourself.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "know", ipa: "/nəʊ/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/əʊ/"], difficulty: 3, exampleSentence: "I know the answer.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "there", ipa: "/ðeə/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/eə/"], difficulty: 4, exampleSentence: "He is there.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "show", ipa: "/ʃəʊ/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/əʊ/"], difficulty: 4, exampleSentence: "Show me the way.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "where", ipa: "/weə/", soundGroupId: "map-t1-g09-ou-ea", targetPhonemes: ["/eə/"], difficulty: 4, exampleSentence: "Where are you?", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G09: MinimalPairData[] = [
+  { word1: "go", ipa1: "/ɡəʊ/", word2: "gear", ipa2: "/ɡɪə/", soundGroupId: "map-t1-g09-ou-ea", contrastPhonemes: ["/əʊ/", "/ɪə/"], difficulty: 6, explanation: "Cặp diphthong trung tâm", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Phân biệt 2 diphthong kết schwa" },
+  { word1: "home", ipa1: "/həʊm/", word2: "hair", ipa2: "/heə/", soundGroupId: "map-t1-g09-ou-ea", contrastPhonemes: ["/əʊ/", "/eə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "know", ipa1: "/nəʊ/", word2: "near", ipa2: "/nɪə/", soundGroupId: "map-t1-g09-ou-ea", contrastPhonemes: ["/əʊ/", "/ɪə/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "show", ipa1: "/ʃəʊ/", word2: "share", ipa2: "/ʃeə/", soundGroupId: "map-t1-g09-ou-ea", contrastPhonemes: ["/əʊ/", "/eə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+export const SENTENCES_T1_G09: SentenceItemData[] = [
+  { sentence: "Go home and take care.", soundGroupId: "map-t1-g09-ou-ea", targetWords: ["Go", "home", "care"], targetPhonemes: ["/əʊ/", "/əʊ/", "/eə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu chứa cả 2 diphthong" },
+  { sentence: "I know where he is there.", soundGroupId: "map-t1-g09-ou-ea", targetWords: ["know", "where", "there"], targetPhonemes: ["/əʊ/", "/eə/", "/eə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "Show me the way home.", soundGroupId: "map-t1-g09-ou-ea", targetWords: ["Show", "home"], targetPhonemes: ["/əʊ/", "/əʊ/"], difficulty: 4, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
+// TOPIC 1 - NHÓM 10: /ɪə/ & /ʊə/ (ear/tour) - KẾT THÚC BẰNG SCHWA
+// ============================================================================
+
+export const WORDS_T1_G10_IA_UA: WordItemData[] = [
+  { word: "ear", ipa: "/ɪə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ɪə/"], difficulty: 4, exampleSentence: "I have an ear ache.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ɪə/ trượt từ /ɪ/ tới schwa" },
+  { word: "tour", ipa: "/tʊə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ʊə/"], difficulty: 6, exampleSentence: "The tour was great.", status: "ACTIVE", sourceType: "FREE_API", reviewNote: "/ʊə/ trượt từ /ʊ/ tới schwa" },
+  { word: "here", ipa: "/hɪə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ɪə/"], difficulty: 4, exampleSentence: "Come here.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "poor", ipa: "/pʊə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ʊə/"], difficulty: 5, exampleSentence: "The poor man needs help.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "fear", ipa: "/fɪə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ɪə/"], difficulty: 4, exampleSentence: "Don't fear the dark.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "sure", ipa: "/ʃʊə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ʊə/"], difficulty: 5, exampleSentence: "I am sure.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "near", ipa: "/nɪə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ɪə/"], difficulty: 4, exampleSentence: "The shop is near.", status: "ACTIVE", sourceType: "FREE_API" },
+  { word: "pure", ipa: "/pjʊə/", soundGroupId: "map-t1-g10-ia-ua", targetPhonemes: ["/ʊə/"], difficulty: 6, exampleSentence: "The water is pure.", status: "ACTIVE", sourceType: "FREE_API" },
+];
+
+export const MINIMAL_PAIRS_T1_G10: MinimalPairData[] = [
+  { word1: "ear", ipa1: "/ɪə/", word2: "tour", ipa2: "/tʊə/", soundGroupId: "map-t1-g10-ia-ua", contrastPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 5, explanation: "/ɪə/ từ /ɪ/, /ʊə/ từ /ʊ/ — cùng kết schwa", status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Cặp diphthong kết schwa" },
+  { word1: "here", ipa1: "/hɪə/", word2: "poor", ipa2: "/pʊə/", soundGroupId: "map-t1-g10-ia-ua", contrastPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "fear", ipa1: "/fɪə/", word2: "sure", ipa2: "/ʃʊə/", soundGroupId: "map-t1-g10-ia-ua", contrastPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL" },
+  { word1: "near", ipa1: "/nɪə/", word2: "pure", ipa2: "/pjʊə/", soundGroupId: "map-t1-g10-ia-ua", contrastPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+export const SENTENCES_T1_G10: SentenceItemData[] = [
+  { sentence: "Come here near my ear.", soundGroupId: "map-t1-g10-ia-ua", targetWords: ["here", "near", "ear"], targetPhonemes: ["/ɪə/", "/ɪə/", "/ɪə/"], difficulty: 5, status: "ACTIVE", sourceType: "MANUAL", reviewNote: "Câu nhiều /ɪə/" },
+  { sentence: "The poor man is sure of the tour.", soundGroupId: "map-t1-g10-ia-ua", targetWords: ["poor", "sure", "tour"], targetPhonemes: ["/ʊə/", "/ʊə/", "/ʊə/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+  { sentence: "Don't fear the pure air.", soundGroupId: "map-t1-g10-ia-ua", targetWords: ["fear", "pure"], targetPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 6, status: "ACTIVE", sourceType: "MANUAL" },
+];
+
+// ============================================================================
 // EXPORTS - Tổng hợp theo sound group
 // ============================================================================
 
@@ -861,6 +1054,41 @@ export const LESSON_CONTENT_BY_SOUND_GROUP = {
     words: WORDS_T4_G03_FINAL,
     minimalPairs: MINIMAL_PAIRS_T4_G03,
     sentences: SENTENCES_T4_G03,
+  },
+  "map-t1-g03-central": {
+    words: WORDS_T1_G03_CENTRAL,
+    minimalPairs: MINIMAL_PAIRS_T1_G03,
+    sentences: SENTENCES_T1_G03,
+  },
+  "map-t1-g05-u-uh": {
+    words: WORDS_T1_G05_U_UH,
+    minimalPairs: MINIMAL_PAIRS_T1_G05,
+    sentences: SENTENCES_T1_G05,
+  },
+  "map-t1-g06-er": {
+    words: WORDS_T1_G06_ER,
+    minimalPairs: MINIMAL_PAIRS_T1_G06,
+    sentences: SENTENCES_T1_G06,
+  },
+  "map-t1-g07-ei-ai": {
+    words: WORDS_T1_G07_EI_AI,
+    minimalPairs: MINIMAL_PAIRS_T1_G07,
+    sentences: SENTENCES_T1_G07,
+  },
+  "map-t1-g08-oi-au": {
+    words: WORDS_T1_G08_OI_AU,
+    minimalPairs: MINIMAL_PAIRS_T1_G08,
+    sentences: SENTENCES_T1_G08,
+  },
+  "map-t1-g09-ou-ea": {
+    words: WORDS_T1_G09_OU_EA,
+    minimalPairs: MINIMAL_PAIRS_T1_G09,
+    sentences: SENTENCES_T1_G09,
+  },
+  "map-t1-g10-ia-ua": {
+    words: WORDS_T1_G10_IA_UA,
+    minimalPairs: MINIMAL_PAIRS_T1_G10,
+    sentences: SENTENCES_T1_G10,
   },
 };
 
