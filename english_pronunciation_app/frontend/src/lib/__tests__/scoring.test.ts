@@ -117,3 +117,84 @@ test("exercise rating and completion thresholds stay stable", () => {
   assert.equal(isExerciseCompleted(69), false);
   assert.equal(isExerciseCompleted(70), true);
 });
+
+test("scoreMultipleChoice: IPA exact-match — /iː/ correct, /ɪ/ wrong", () => {
+  const question: ScoringQuestion = {
+    id: "q-ipa-1",
+    answer: "/iː/",
+    score: 10,
+    type: { id: "qtype-1-mc", name: "Trắc nghiệm nghe" },
+    options: [
+      { id: "o1", content: "/iː/" },
+      { id: "o2", content: "/ɪ/" },
+    ],
+  };
+  const correctResult = scoreQuestion(question, {
+    questionId: "q-ipa-1",
+    selectedOptionId: "o1",
+    selectedText: "/iː/",
+  });
+  assert.equal(correctResult.isCorrect, true);
+
+  const wrongResult = scoreQuestion(question, {
+    questionId: "q-ipa-1",
+    selectedOptionId: "o2",
+    selectedText: "/ɪ/",
+  });
+  assert.equal(wrongResult.isCorrect, false);
+});
+
+test("scoreMultipleChoice: word mode vẫn normalized match (không vỡ exact-match branch)", () => {
+  const question: ScoringQuestion = {
+    id: "q-word-1",
+    answer: "sheep",
+    score: 10,
+    type: { id: "qtype-1-mc", name: "Trắc nghiệm nghe" },
+    options: [
+      { id: "o1", content: "sheep" },
+      { id: "o2", content: "ship" },
+    ],
+  };
+  const result = scoreQuestion(question, {
+    questionId: "q-word-1",
+    selectedOptionId: "o1",
+    selectedText: "sheep",
+  });
+  assert.equal(result.isCorrect, true);
+});
+
+test("scoreMultipleChoice: nhóm 3-âm g03 /ɑː/&/ʌ/&/ə/ — normalize rỗng, phải exact-match (bug thật)", () => {
+  // Đây là case spec nêu: cả 3 IPA non-ASCII → normalize thành "" → bấm nút nào cũng đúng nếu không exact-match.
+  const question: ScoringQuestion = {
+    id: "q-g03",
+    answer: "/ɑː/",
+    score: 10,
+    type: { id: "qtype-1-mc", name: "Trắc nghiệm nghe" },
+    options: [
+      { id: "o1", content: "/ɑː/" },
+      { id: "o2", content: "/ʌ/" },
+      { id: "o3", content: "/ə/" },
+    ],
+  };
+  // Chọn /ɑː/ (đúng) → correct
+  const correctResult = scoreQuestion(question, {
+    questionId: "q-g03",
+    selectedOptionId: "o1",
+    selectedText: "/ɑː/",
+  });
+  assert.equal(correctResult.isCorrect, true);
+  // Chọn /ʌ/ (sai) → phải wrong, KHÔNG phải correct do normalize rỗng
+  const wrongResult = scoreQuestion(question, {
+    questionId: "q-g03",
+    selectedOptionId: "o2",
+    selectedText: "/ʌ/",
+  });
+  assert.equal(wrongResult.isCorrect, false);
+  // Chọn /ə/ (sai) → phải wrong
+  const wrongResult2 = scoreQuestion(question, {
+    questionId: "q-g03",
+    selectedOptionId: "o3",
+    selectedText: "/ə/",
+  });
+  assert.equal(wrongResult2.isCorrect, false);
+});

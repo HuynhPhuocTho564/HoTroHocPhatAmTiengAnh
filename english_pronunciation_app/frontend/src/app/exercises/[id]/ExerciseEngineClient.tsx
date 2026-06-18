@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { playSfx, useSfxMuted } from "@/lib/sfx";
+import { useComboStreak } from "@/hooks/useComboStreak";
+import ListenFeedbackSheet from "./ListenFeedbackSheet";
 
 type ExerciseQuestionOption = {
   id: string;
   content: string;
 };
 
-type ExerciseQuestion = {
+export type ExerciseQuestion = {
   id: string;
   name: string | null;
   content: string;
@@ -37,7 +40,14 @@ type WordPrompt = {
     id?: string;
     text?: string;
     content?: string;
+    audioUrl?: string;
   }>;
+  // v2 listen_choose 3-stage (phoneme identification):
+  answerType?: "phoneme";
+  stage?: 1 | 2 | 3;
+  targetPhoneme?: string;
+  contrastPhonemes?: string[];
+  skeleton?: string | null;
 };
 
 type SubmitAnswer = {
@@ -123,7 +133,7 @@ function normalizeAnswer(value: string) {
     .trim();
 }
 
-function parseWordPrompt(content: string): WordPrompt {
+export function parseWordPrompt(content: string): WordPrompt {
   try {
     const parsed = JSON.parse(content) as Partial<WordPrompt>;
     return {
@@ -271,15 +281,26 @@ function ListenChooseQuestion({
   selectedAnswer: string | null;
 }) {
   const contentData = useMemo(() => parseWordPrompt(question.content), [question.content]);
-  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : "...";
-  const parsedOptions =
-    contentData.options
-      ?.map((option, index) => ({
-        id: String(option.id ?? `${question.id}-json-option-${index}`),
-        content: String(option.text ?? option.content ?? ""),
+  // v2 listen_choose 3-stage: stage 1 (hiện word), 2 (skeleton), 3 (chỉ audio). Fallback 1 cho câu cũ (word-mode).
+  const stage = contentData.stage ?? 1;
+  const isPhonemeMode = contentData.answerType === "phoneme";
+
+  // Phoneme mode: option = contrastPhonemes (N nút IPA). Word mode (cũ): option = contentData.options.
+  const options = isPhonemeMode
+    ? (contentData.contrastPhonemes ?? []).map((ph, i) => ({
+        id: `${question.id}-ph-${i}`,
+        content: ph,
       }))
-      .filter((option) => option.content.length > 0) ?? [];
-  const options = question.options.length > 0 ? question.options : parsedOptions;
+    : (question.options.length > 0
+        ? question.options
+        : contentData.options
+            ?.map((option, index) => ({
+              id: String(option.id ?? `${question.id}-json-option-${index}`),
+              content: String(option.text ?? option.content ?? ""),
+            }))
+            .filter((option) => option.content.length > 0) ?? []);
+
+  const displayWord = contentData.word ? contentData.word.charAt(0).toUpperCase() + contentData.word.slice(1) : "...";
 
   useEffect(() => {
     if (!contentData.audioUrl) return;
@@ -292,24 +313,56 @@ function ListenChooseQuestion({
     return () => window.clearTimeout(timer);
   }, [contentData.audioUrl, question.id]);
 
+  // Exact-match cho phoneme (IPA không normalize được), normalize cho word.
+  const checkCorrect = (optContent: string) =>
+    isPhonemeMode ? optContent === question.answer : normalizeAnswer(optContent) === normalizeAnswer(question.answer);
+
+  // Stage 2 skeleton: split theo "_" và highlight ô trống màu warning.
+  const skeletonParts = contentData.skeleton ? contentData.skeleton.split("_") : [];
+
   return (
     <div className="space-y-10 text-center">
       <div className="flex flex-col items-center gap-4">
-        <h2 className="text-5xl font-bold text-neutral-900 sm:text-6xl">{displayWord}</h2>
-        {/* IPA is hidden in listen_choose mode - user must rely on audio */}
+        {/* Stage 1: hiện word. Stage 2: ẩn word, hiện skeleton (fallback word nếu skeleton null). Stage 3: ẩn cả. */}
+        {stage === 1 && (
+          <h2 className="text-5xl font-bold text-neutral-900 sm:text-6xl">{displayWord}</h2>
+        )}
+        {stage === 2 &&
+          (contentData.skeleton ? (
+            <h2 className="font-ipa text-5xl font-bold text-neutral-900 sm:text-6xl" aria-label={`IPA khuyết: ${contentData.skeleton}`}>
+              {skeletonParts.map((part, i, arr) => (
+                <span key={i}>
+                  {part}
+                  {i < arr.length - 1 && (
+                    <span className="mx-1 inline-block min-w-[1ch] rounded-md bg-warning-100 px-2 text-warning-600 underline">
+                      _
+                    </span>
+                  )}
+                </span>
+              ))}
+            </h2>
+          ) : (
+            // fallback: target không trong ipa → render stage 1 (show word)
+            <h2 className="text-5xl font-bold text-neutral-900 sm:text-6xl">{displayWord}</h2>
+          ))}
+        {/* Stage 3: không hiện word/skeleton */}
         <AudioButton audioUrl={contentData.audioUrl} label="Phát lại audio" />
       </div>
 
       <div>
-        <p className="mb-6 text-lg font-medium text-neutral-600">{question.name || "Chọn đáp án đúng"}</p>
+        <p className="mb-6 text-lg font-medium text-neutral-600">
+          {stage === 1 && (question.name || "Phân biệt âm mục tiêu")}
+          {stage === 2 && (question.name || "Nghe & điền âm còn thiếu")}
+          {stage === 3 && (question.name || "Âm bạn vừa nghe là")}
+        </p>
         <div className="flex flex-wrap justify-center gap-4">
           {options.map((option) => {
             let buttonClass = "border-neutral-200 bg-white text-neutral-800 hover:border-primary-300";
             if (isAnswered) {
-              if (normalizeAnswer(option.content) === normalizeAnswer(question.answer)) {
+              if (checkCorrect(option.content)) {
                 buttonClass = "border-success-500 bg-success-50 text-success-700 ring-4 ring-success-100";
               } else if (option.content === selectedAnswer) {
-                buttonClass = "border-error-500 bg-error-50 text-error-700";
+                buttonClass = "border-error-500 bg-error-50 text-error-700 animate-shake";
               } else {
                 buttonClass = "border-neutral-200 bg-neutral-50 text-neutral-400";
               }
@@ -321,7 +374,7 @@ function ListenChooseQuestion({
                 type="button"
                 onClick={() =>
                   onAnswer(
-                    normalizeAnswer(option.content) === normalizeAnswer(question.answer),
+                    checkCorrect(option.content),
                     option.content,
                     question.options.length > 0 ? option.id : null,
                   )
@@ -827,6 +880,23 @@ function MinimalPairsQuestion({
   );
 }
 
+// Popup lời khen ngẫu nhiên hiện ngắn (0.6s) khi combo đạt milestone mới (SP1 feedback).
+function PraisePopup({ text, onDismiss }: { text: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onDismiss, 600);
+    return () => window.clearTimeout(timer);
+  }, [text, onDismiss]);
+  return (
+    <div
+      className="pointer-events-none fixed left-1/2 top-24 z-20 -translate-x-1/2 animate-bounce rounded-full bg-primary-600 px-6 py-3 text-lg font-bold text-white shadow-lg"
+      role="status"
+      aria-live="polite"
+    >
+      {text}
+    </div>
+  );
+}
+
 export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseData }) {
   const router = useRouter();
   const [startedAt] = useState(() => new Date().toISOString());
@@ -842,6 +912,10 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
   const [isCorrect, setIsCorrect] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+
+  // SP1 feedback: SFX (ting/buzz) + combo streak (🔥 + lời khen)
+  const combo = useComboStreak();
+  const [muted, setMuted] = useSfxMuted();
 
   const questions = exercise.questions;
   const currentQuestion = questions[currentIndex];
@@ -901,6 +975,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
   const finishExercise = (finalAnswers = answersRef.current) => {
     setIsFinished(true);
+    combo.reset();
     void submitExercise(finalAnswers);
   };
 
@@ -929,8 +1004,12 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
     if (correct) {
       setScore((current) => current + currentQuestion.score);
+      playSfx("correct");
+      combo.onCorrect();
     } else {
       addIncorrectQuestion(answerOpt);
+      playSfx("wrong");
+      combo.onWrong();
     }
   };
 
@@ -944,8 +1023,12 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
     if (correct) {
       setScore((current) => current + currentQuestion.score);
+      playSfx("correct");
+      combo.onCorrect();
     } else {
       addIncorrectQuestion(transcript);
+      playSfx("wrong");
+      combo.onWrong();
     }
 
     if (currentIndex < questions.length - 1) {
@@ -1078,21 +1161,50 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
     <div className="flex min-h-screen flex-col bg-neutral-50">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 transition-colors sm:px-6">
 
-        <button
-          type="button"
-          onClick={() => router.push("/learning_map")}
-          aria-label="Quay về lộ trình"
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
-        >
-          <span aria-hidden="true">←</span> Lộ trình
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/learning_map")}
+            aria-label="Quay về lộ trình"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+          >
+            <span aria-hidden="true">←</span> Lộ trình
+          </button>
+          {/* Nút mute SFX */}
+          <button
+            type="button"
+            onClick={() => setMuted(!muted)}
+            aria-label={muted ? "Bật âm thanh phản hồi" : "Tắt âm thanh phản hồi"}
+            aria-pressed={muted}
+            className="rounded-lg p-2 text-lg transition-colors hover:bg-neutral-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+        </div>
+
         <div className="mx-4 max-w-2xl flex-1">
           <ProgressBar value={progressPercent} max={100} size="lg" showPercentage={false} label={`Câu ${currentIndex + 1}/${questions.length}`} />
         </div>
-        <div className="min-w-16 text-right font-bold text-neutral-700" aria-label={`Điểm hiện tại ${score}`}>
-          {score} điểm
+
+        <div className="flex items-center gap-3">
+          {/* Combo 🔥 (milestone ≥3) */}
+          {combo.milestone > 0 && (
+            <span
+              className="text-lg font-bold"
+              title={`Combo ${combo.combo} câu đúng liên tiếp`}
+              aria-label={`Combo ${combo.combo} câu đúng liên tiếp`}
+            >
+              {"🔥".repeat(combo.milestone)}
+            </span>
+          )}
+          <div className="min-w-16 text-right font-bold text-neutral-700" aria-label={`Điểm hiện tại ${score}`}>
+            {score} điểm
+          </div>
         </div>
       </header>
+
+      {/* Praise popup (hiện 0.6s khi đạt milestone combo) */}
+      {combo.praise && <PraisePopup text={combo.praise} onDismiss={combo.clearPraise} />}
 
       <main className="mx-auto mt-10 flex w-full max-w-4xl flex-1 flex-col p-4 sm:p-6">
         <div className="mb-10 text-center text-sm font-bold uppercase tracking-wider text-neutral-400">
@@ -1110,51 +1222,14 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
         )}
       </main>
 
-      {!isVoiceTask && (
-        <div
-          className={`fixed bottom-0 left-0 right-0 border-t-2 p-4 transition-transform duration-300 sm:p-6 ${
-            isAnswered ? "translate-y-0" : "translate-y-full"
-          } ${isCorrect ? "border-success-200 bg-success-50" : "border-error-200 bg-error-50"}`}
-          role="status"
-          aria-live="polite"
-        >
-          <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-1 items-start gap-4">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-black ${
-                  isCorrect ? "bg-white text-success-600" : "bg-white text-error-600"
-                }`}
-                aria-hidden="true"
-              >
-                {isCorrect ? "OK" : "!"}
-              </div>
-              <div className="space-y-3">
-                <h2 className={`text-2xl font-bold ${isCorrect ? "text-success-700" : "text-error-700"}`}>
-                  {isCorrect ? `Chính xác: ${currentQuestion.answer}` : `Bạn chọn ${selectedAnswer} - chưa đúng`}
-                </h2>
-                {!isCorrect && (
-                  <p className="font-medium text-error-700">
-                    Đáp án đúng là <span className="text-xl font-bold">{currentQuestion.answer}</span>
-                  </p>
-                )}
-                {currentHint && (
-                  <div className={`mt-2 rounded-lg p-4 text-sm ${isCorrect ? "bg-success-100 text-success-800" : "bg-error-100 text-error-800"}`}>
-                    {currentHint}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Button
-              variant={isCorrect ? "success" : "error"}
-              size="lg"
-              className="min-h-14 w-full text-lg sm:mt-2 sm:w-48"
-              onClick={handleNextListen}
-            >
-              Tiếp theo
-            </Button>
-          </div>
-        </div>
+      {!isVoiceTask && isAnswered && (
+        <ListenFeedbackSheet
+          isCorrect={isCorrect}
+          selectedAnswer={selectedAnswer}
+          question={currentQuestion}
+          hint={currentHint}
+          onAdvance={handleNextListen}
+        />
       )}
     </div>
   );

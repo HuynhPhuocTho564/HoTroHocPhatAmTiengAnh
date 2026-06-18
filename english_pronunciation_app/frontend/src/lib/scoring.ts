@@ -75,7 +75,20 @@ function scoreMultipleChoice(question: ScoringQuestion, answer: SubmitAnswerInpu
     ? question.options.find((option) => option.id === answer.selectedOptionId)
     : null;
   const selectedText = selectedOption?.content ?? answer.selectedText ?? "";
-  const isCorrect = normalizeAnswerText(selectedText) === normalizeAnswerText(question.answer);
+
+  // So sánh đáp án. Hai nhánh:
+  // 1. Exact string match — cho IPA phoneme answer (vd /iː/ vs /ɪ/ khác nhau nguyên văn).
+  // 2. Normalized match — cho word answer (ship/Sheep/Ship! → "ship" bằng nhau).
+  //
+  // BUG được sửa: normalizeAnswerText strip ký tự non-ASCII → nhiều IPA thành "" (vd /ɑː/&/ʌ/&/ə/
+  // cả 3 → ""). Nếu chỉ dùng normalized match → bấm nút nào cũng đúng (cả 3 = "").
+  // Giải pháp: nếu CẢ HAI normalize thành rỗng → bắt buộc exact-match (normalized vô nghĩa).
+  // Nếu ít nhất 1 còn nội dung ASCII → normalized match hợp lệ (word mode).
+  const normalizedSelected = normalizeAnswerText(selectedText);
+  const normalizedAnswer = normalizeAnswerText(question.answer);
+  const isCorrect =
+    selectedText === question.answer ||
+    (normalizedSelected.length > 0 && normalizedAnswer.length > 0 && normalizedSelected === normalizedAnswer);
 
   return {
     questionId: question.id,

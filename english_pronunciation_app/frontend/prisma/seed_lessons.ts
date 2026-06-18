@@ -32,6 +32,12 @@ import {
   getModesForTopic,
 } from "./lesson-catalog";
 import {
+  buildListenChooseQuestions,
+  filterSinglePhonemeWords,
+  buildContrastPhonemes,
+  type ListenChooseWord,
+} from "./listen-choose-builder";
+import {
   LESSON_CONTENT_BY_SOUND_GROUP,
   getContentBySoundGroup,
   type WordItemData,
@@ -776,6 +782,111 @@ async function generateQuestions() {
       const exerciseId = generateExerciseId(sg.id, mode.id);
       const exercise = await prisma.exercise.findUnique({ where: { id: exerciseId } });
       if (!exercise) continue;
+
+      // === v2 listen_choose 3-stage (phoneme-ID): xử lý theo pool cả nhóm, KHÔNG theo bank item ===
+      // Skip CĐ4 (dùng mode_a_listen_choose riêng). Nhánh bank cũ (sau) trở thành unreachable cho listen_choose.
+      if (mode.id === "listen_choose" && sg.topicId !== "topic-4-stress-connected") {
+        // 1. Pool từ ACTIVE của sound group (tra cứu WordItem lấy audioUrl thật)
+        const poolWords: ListenChooseWord[] = [];
+        for (const w of content.words) {
+          const wordItem = await prisma.wordItem.findFirst({ where: { word: w.word, ipa: w.ipa } });
+          if (wordItem && wordItem.status === "ACTIVE" && wordItem.audioUrl) {
+            poolWords.push({
+              word: w.word,
+              ipa: w.ipa,
+              targetPhoneme: w.targetPhonemes[0],
+              audioUrl: wordItem.audioUrl,
+            });
+          }
+        }
+
+        // 2. Contrast: nhóm 1-âm → mồi 1 phoneme từ neighbor (orderIndex±1 cùng topic)
+        let neighborPhoneme: string | null = null;
+        if (sg.targetPhonemes.length === 1) {
+          const neighbor = SOUND_GROUPS.find(
+            (n) =>
+              n.topicId === sg.topicId &&
+              Math.abs(n.orderIndex - sg.orderIndex) === 1 &&
+              n.targetPhonemes.length >= 1,
+          );
+          neighborPhoneme = neighbor?.targetPhonemes[0] ?? null;
+          if (!neighborPhoneme) {
+            console.warn(`   ⚠️  Không tìm neighbor cho nhóm 1-âm ${sg.id}, contrast chỉ 1 nút.`);
+          }
+        }
+        const contrastPhonemes = buildContrastPhonemes(sg.targetPhonemes, neighborPhoneme);
+
+        // 3. Lọc chỉ từ 1-âm contrast (loại từ "nhiễu" chứa ≥2 âm contrast, vd father /ɑː/+ /ə/)
+        const filteredPool = filterSinglePhonemeWords(poolWords, contrastPhonemes);
+        if (filteredPool.length === 0) {
+          console.warn(`   ⚠️  Pool rỗng sau lọc 1-âm cho ${sg.id}, listen_choose → DRAFT.`);
+          await prisma.exercise.update({ where: { id: exerciseId }, data: { status: "DRAFT", questionCount: 0 } });
+          continue;
+        }
+
+        // 4. Sinh 10 câu 3-stage (4 S1 + 4 S2 + 2 S3; pool <10 → lặp cycle)
+        const questions3stage = buildListenChooseQuestions(filteredPool, contrastPhonemes);
+
+        // Xóa câu listen_choose cũ của exercise (idempotent, thay thế word-mode cũ)
+        await prisma.question.deleteMany({ where: { exerciseId } });
+
+        let qIdx = 1;
+        for (const q of questions3stage) {
+          const questionId = generateQuestionId(exerciseId, qIdx);
+          const contentJson = JSON.stringify({
+            mode: "listen_choose",
+            answerType: "phoneme",
+            stage: q.stage,
+            word: q.word,
+            ipa: q.ipa,
+            audioUrl: q.audioUrl,
+            targetPhoneme: q.targetPhoneme,
+            contrastPhonemes: q.contrastPhonemes,
+            skeleton: q.skeleton,
+          });
+
+          await prisma.question.upsert({
+            where: { id: questionId },
+            update: {
+              name: `Q${qIdx}`,
+              content: contentJson,
+              answer: q.answer, // = targetPhoneme (IPA y nguyên)
+              score: 10,
+              status: "ACTIVE",
+              typeId: qtypeMap["qtype-1-mc"].id,
+            },
+            create: {
+              id: questionId,
+              name: `Q${qIdx}`,
+              content: contentJson,
+              answer: q.answer,
+              score: 10,
+              status: "ACTIVE",
+              typeId: qtypeMap["qtype-1-mc"].id,
+              exerciseId,
+            },
+          });
+
+          // AnswerOption = contrastPhonemes (content = IPA y nguyên, cho scoring qua selectedOptionId)
+          await prisma.answerOption.deleteMany({ where: { questionId } });
+          for (const ph of q.contrastPhonemes) {
+            await prisma.answerOption.create({
+              data: { content: ph, questionId },
+            });
+          }
+
+          qIdx++;
+          totalQuestions++;
+        }
+
+        // Cập nhật questionCount + status ACTIVE
+        await prisma.exercise.update({
+          where: { id: exerciseId },
+          data: { questionCount: questions3stage.length, status: "ACTIVE" },
+        });
+        console.log(`   ✓ ${sg.id} listen_choose: ${questions3stage.length} câu 3-stage`);
+        continue; // skip nhánh bank cũ (word-mode) — unreachable cho listen_choose CĐ1-3
+      }
 
       // Lấy QuestionBankItem ACTIVE của sound group + questionType tương ứng
       const bankItems = await prisma.questionBankItem.findMany({
