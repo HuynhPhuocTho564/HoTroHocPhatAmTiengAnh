@@ -118,6 +118,10 @@ model Topic {
   name        String // TenCD
   description String? // MoTa
 
+  // v2: thứ tự chủ đề + unlock tuần tự
+  orderIndex             Int @default(0) // 1=vowels, 2=consonants, 3=minimal-pairs-hard, 4=stress-connected
+  unlockThresholdPercent Int @default(0) // % hoàn thành topic trước cần đạt. 0 = mở tự do (CĐ1). CĐ2/3/4 = 80.
+
   exercises   Exercise[]
   soundGroups SoundGroup[]
 }
@@ -182,6 +186,7 @@ model Question {
   status  String  @default("ACTIVE") // TrangThaiCauhoi
   score   Int     @default(10) // điểm
   answer  String // đáp án
+  acceptedAnswers Json? // v2: mảng đáp án chấp nhận cho Mode B CĐ4. null = dùng `answer` đơn trị.
 
   typeId String
   type   QuestionType @relation(fields: [typeId], references: [id])
@@ -271,6 +276,10 @@ model WordItem {
   sourceType  String    @default("MANUAL") // MANUAL, OPEN_SOURCE, FREE_API, LICENSED
   sourceUrl   String?
   meaningVi   String?
+  // v2: cho Chủ đề 4 Trọng âm & Nối âm
+  syllables      Json?   // Mảng âm tiết để UI "Tap the Stress" render khối, vd ["pho","to","gra","phy"]
+  stressIndex    Int?    // Vị trí âm tiết nhấn (0-based)
+  wordStressType String? // WORD_STRESS | WEAK_FORM | LINKING | ASSIMILATION. null = từ IPA thường (CĐ1-3).
   difficulty  String    @default("EASY") // EASY, MEDIUM, HARD
   status      String    @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
   reviewNote  String?
@@ -345,6 +354,7 @@ model QuestionBankItem {
   prompt      String?
   contentJson Json
   answer      String
+  acceptedAnswers Json? // v2: mảng đáp án chấp nhận cho Mode B CĐ4 (kho nguồn). null = dùng `answer` đơn trị.
   score       Int      @default(10)
   difficulty  String   @default("EASY") // EASY, MEDIUM, HARD
   status      String   @default("NEEDS_REVIEW") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
