@@ -87,22 +87,31 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
   const [showWords, setShowWords] = useState<[boolean, boolean]>([false, false]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const recorder = useWaveformRecorder();
+  const recorder0 = useWaveformRecorder();
+  const recorder1 = useWaveformRecorder();
+  const getRecorder = (index: number) => (index === 0 ? recorder0 : recorder1);
 
   useEffect(() => {
     setStatuses(["idle", "idle"]); setTranscripts(["", ""]); setOverallStatus("idle");
     setShowWords([false, false]); setErrorMessage(null);
-    recorder.reset();
+    recorder0.reset();
+    recorder1.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id]);
 
-  const hint = hintText(recorder.level);
   const canCheck = statuses[0] === "recorded" && statuses[1] === "recorded";
   const combinedTranscript = transcripts.filter(Boolean).join(" ");
 
   const startRecording = (index: number) => {
     const Ctor = getSpeechCtor();
     if (!Ctor) { setErrorMessage("Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome/Edge."); return; }
+    const recorder = getRecorder(index);
+    // Stop cột kia nếu đang recording (tránh 2 stream mic song song)
+    const otherRecorder = getRecorder(1 - index);
+    if (statuses[1 - index] === "recording") {
+      otherRecorder.stop();
+      setStatuses((cur) => cur.map((item, i) => (i === 1 - index && item === "recording" ? "recorded" : item)));
+    }
     const recog = new Ctor();
     recog.continuous = false; recog.lang = "en-US"; recog.interimResults = false; recog.maxAlternatives = 1;
     recog.onresult = (e) => {
@@ -119,7 +128,7 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
     recog.onend = () => setStatuses((cur) => cur.map((item, i) => (i === index && item === "recording" ? "idle" : item)));
     recognitionRef.current = recog;
     setErrorMessage(null);
-    recorder.reset(); // reset waveform giữa 2 lần thu
+    recorder.reset(); // clearWaveform xóa sóng cũ cột này trước thu mới
     setStatuses((cur) => cur.map((item, i) => (i === index ? "recording" : item)));
     void recorder.start();
     try {
@@ -156,9 +165,11 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
           <div className="mb-6 rounded-xl border-2 border-warning-400 bg-warning-50 p-5 text-center font-bold text-warning-800" role="alert">⚠️ {errorMessage}</div>
         )}
 
-        {/* 2 cột: IPA trên + từ ẩn + audio */}
+        {/* 2 cột: IPA trên + từ ẩn + audio + waveform + nút thu */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {pairs.map((pair, index) => (
+          {pairs.map((pair, index) => {
+            const recorder = getRecorder(index);
+            return (
             <div key={`${pair.word}-${index}`} className="rounded-xl border-2 border-warning-200 bg-gradient-to-br from-white to-warning-50 p-6 transition-all hover:border-warning-400">
               {/* IPA trên (hiện luôn) */}
               {pair.ipa && <p className="mb-3 text-center font-ipa text-3xl font-bold text-warning-600">{pair.ipa}</p>}
@@ -172,31 +183,39 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
               </div>
               {/* Audio */}
               <div className="mb-4 flex justify-center"><AudioButton audioUrl={pair.audioUrl} label="🔊 Nghe mẫu" /></div>
-              {/* Nút thu từng từ */}
+              {/* Waveform container luôn render (để hook useEffect khởi tạo wavesurfer lúc mount).
+                  Ẩn CSS khi không recording để không chiếm chỗ. */}
+              <div
+                ref={recorder.containerRef}
+                className={`mb-4 rounded-lg bg-neutral-50 p-2 transition-all ${
+                  statuses[index] === "recording" ? "opacity-100" : "h-0 overflow-hidden opacity-0 py-0"
+                }`}
+              />
+              {/* Hint text khi cột này đang recording */}
+              {statuses[index] === "recording" && (
+                <p className={`mb-3 text-center text-sm font-bold ${hintText(recorder.level).color}`}>
+                  {hintText(recorder.level).text}
+                </p>
+              )}
+              {/* Nút thu / trạng thái thu */}
               <button type="button" onClick={() => startRecording(index)} disabled={statuses[index] === "recording"}
                 className={`w-full rounded-xl border-2 px-6 py-4 font-bold uppercase tracking-wider transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-500 disabled:cursor-wait disabled:opacity-70 ${
                   statuses[index] === "recorded" ? "border-success-500 bg-success-500 text-white hover:bg-success-600"
                   : statuses[index] === "recording" ? "animate-pulse border-error-500 bg-error-500 text-white"
                   : "border-warning-300 bg-warning-100 text-warning-800 hover:border-warning-500 hover:bg-warning-200"}`}>
-                {statuses[index] === "recording" ? "🎤 Đang nghe..." : statuses[index] === "recorded" ? "✓ Ghi lại" : "🎤 Bấm để nói"}
+                {statuses[index] === "recording" ? "🎤 Đang nghe..." : statuses[index] === "recorded" ? "✓ Đã ghi" : "🎤 Bấm để nói"}
               </button>
+              {/* Nút Ghi lại khi đã ghi (retake trước khi kiểm tra) */}
               {statuses[index] === "recorded" && (
-                <div className="mt-3 rounded-lg border border-success-200 bg-success-50 p-3 text-center">
-                  <p className="text-xs font-semibold text-neutral-600">Bạn đã đọc:</p>
-                  <p className="text-lg font-bold text-success-700">"{transcripts[index]}"</p>
-                </div>
+                <button type="button" onClick={() => startRecording(index)}
+                  className="mt-2 w-full rounded-lg border-2 border-warning-300 bg-white px-4 py-2 text-sm font-bold text-warning-700 transition-colors hover:bg-warning-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-300">
+                  🎤 Ghi lại
+                </button>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
-
-        {/* Waveform chung (hiện khi đang thu 1 trong 2) */}
-        {(statuses[0] === "recording" || statuses[1] === "recording") && (
-          <div className="mb-6 space-y-2 text-center">
-            <div ref={recorder.containerRef} className="rounded-lg bg-neutral-50 p-2" />
-            <p className={`text-sm font-bold ${hint.color}`}>{hint.text}</p>
-          </div>
-        )}
 
         {/* Check button / results */}
         {overallStatus === "idle" || overallStatus === "processing" ? (
@@ -223,7 +242,7 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
               <p className="mt-2 text-xl font-bold text-neutral-900">{pairs[0].word} & {pairs[1].word}</p>
             </div>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <button type="button" onClick={() => { setOverallStatus("idle"); setStatuses(["idle", "idle"]); setTranscripts(["", ""]); recorder.reset(); }}
+              <button type="button" onClick={() => { setOverallStatus("idle"); setStatuses(["idle", "idle"]); setTranscripts(["", ""]); recorder0.reset(); recorder1.reset(); }}
                 className="rounded-xl border-2 border-primary-400 bg-primary-500 px-8 py-4 font-bold text-white hover:bg-primary-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300">
                 🔄 Làm lại
               </button>
