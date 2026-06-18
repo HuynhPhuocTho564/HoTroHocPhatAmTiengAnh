@@ -364,7 +364,7 @@ File can tao/sua:
 - `english_pronunciation_app/frontend/package.json`
 - Test files duoi `english_pronunciation_app/frontend/src/**/__tests__` neu them test unit.
 - `PLAN/01_Roadmap/`
-- `PLAN/00_Project_Context/CURRENT_SYSTEM_STATUS.md`
+- `PLAN/00_Project_Context/CURRENT_PROJECT_CONTEXT.md` (nguon chan thuc hien tai; `CURRENT_SYSTEM_STATUS.md` da archive vao `PLAN/_Archive/` ngay 18/06/2026 - SP1)
 - `PLAN/01_Roadmap/DEMO_SCENARIO_PLAN.md`
 - `PLAN/05_AI_Skills/SKILL_USAGE_BY_PHASE.md`
 

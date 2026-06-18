@@ -65,3 +65,15 @@ Ngay audit: 14/06/2026
 1. Tao `PLAN/_Archive` va chuyen cac file rong/cu vao do.
 2. Viet lai mot file `PLAN/00_Project_Context/CURRENT_PROJECT_CONTEXT.md` lam nguon chinh moi.
 3. Cap nhat roadmap chinh trong `PLAN/01_Roadmap/ACTION_PLAN_NEXT_STEPS.md` sau moi phase.
+
+## Cap nhat 18/06/2026 (SP1 - da thuc hien)
+
+Ca 3 de xuat tren da duoc thuc hien trong sub-project SP1:
+
+- Da tao `PLAN/_Archive/` va `git mv` 7 file stale: `project_spec.md`, `CURRENT_SYSTEM_STATUS.md`, `PROJECT_CONTEXT.md`, `COLOR_SYSTEM.md`, `ADMIN_ACCESS.md`, `KH_AI_PROMPTS.md`, `KH_VIBE_CODING.md`. Xem `_Archive/README.md`.
+- Da tao `PLAN/00_Project_Context/CURRENT_PROJECT_CONTEXT.md` lam nguon chan thuc moi (tech stack that, gamification dang chay, DB v1 da don sach, roadmap SP1-SP6).
+- Da cap nhat tham chieu cheo trong `ACTION_PLAN_NEXT_STEPS.md` va `PLAN/README.md`.
+- Da xoa 6 file code orphan (seed.ts, seed_real.ts, ExerciseType1/3/4.tsx, audioData.ts) - da verify khong import.
+- Quality gate pass: prisma validate + tsc + 17 test + build.
+
+Nguon uu tien hien tai khi code: `CURRENT_PROJECT_CONTEXT.md` (thay the `CURRENT_SYSTEM_STATUS.md` va `project_spec.md`).
