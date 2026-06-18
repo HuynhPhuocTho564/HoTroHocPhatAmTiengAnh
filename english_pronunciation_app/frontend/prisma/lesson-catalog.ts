@@ -1,15 +1,15 @@
 /**
- * LESSON CATALOG - Nguồn cấu hình duy nhất cho 4 chủ đề, 25 nhóm âm, 100 bài
- * 
- * Cấu trúc:
- * - 4 Topics (Chủ đề)
- * - 25 Sound Groups (Nhóm âm)
- * - 4 Exercise Modes mỗi nhóm = 100 bài
- * 
- * Nguyên tắc:
- * - Không code 100 bài thủ công
- * - Seed từ catalog này -> generate Exercise/Question
- * - Status: ACTIVE (có dữ liệu sạch), DRAFT (chưa đủ câu hỏi), LOCKED (chưa sẵn sàng)
+ * LESSON CATALOG v2 - Nguồn cấu hình duy nhất cho 4 chủ đề, 30 nhóm âm, 112 bài
+ *
+ * Cấu trúc (theo LESSON_SYLLABUS_STRUCTURE.md):
+ * - 4 Topics (Chủ đề) với unlock tuần tự 80%
+ * - 30 Sound Groups (10 vowels + 12 consonants + 4 minimal-pairs-hard + 4 stress-connected)
+ * - 6 Exercise Modes (4 chuẩn cho CĐ1-3 + 2 đặc thù cho CĐ4)
+ * - Tổng: 26 nhóm × 4 mode + 4 nhóm × 2 mode = 112 bài
+ *
+ * Unlock: CĐ1 mở tự do; CĐ2/3/4 mở khi topic trước hoàn thành ≥80% (trường unlockThresholdPercent).
+ *
+ * Nguyên tắc: không code 112 bài thủ công. Seed từ catalog -> generate Exercise.
  */
 
 export type TopicDefinition = {
@@ -17,8 +17,9 @@ export type TopicDefinition = {
   name: string;
   description: string;
   orderIndex: number;
+  unlockThresholdPercent: number; // 0 = mở tự do
   totalSoundGroups: number;
-  color: string; // For UI theming
+  color: string;
 };
 
 export type PhonemeDefinition = {
@@ -34,8 +35,8 @@ export type SoundGroupDefinition = {
   name: string;
   description: string;
   orderIndex: number;
-  targetPhonemes: string[]; // IPA symbols
-  difficulty: number; // 1-10
+  targetPhonemes: string[];
+  difficulty: number;
   notes: string;
 };
 
@@ -46,50 +47,58 @@ export type ExerciseModeDefinition = {
   questionTypeId: string;
   orderIndex: number;
   icon: string;
+  appliesToTopics: string[]; // topic id áp dụng mode này
 };
 
 // ============================================================================
-// TOPICS (4 chủ đề)
+// TOPICS (4 chủ đề, unlock tuần tự 80%)
 // ============================================================================
 
 export const TOPICS: TopicDefinition[] = [
   {
-    id: "topic-1-monophthongs",
-    name: "Nguyên âm đơn",
-    description: "Nền tảng phát âm - 6 nhóm nguyên âm đơn cơ bản",
+    id: "topic-1-vowels",
+    name: "Nguyên âm",
+    description: "Nền tảng phát âm - 10 nhóm nguyên âm (6 đơn + 4 đôi)",
     orderIndex: 1,
-    totalSoundGroups: 6,
+    unlockThresholdPercent: 0,
+    totalSoundGroups: 10,
     color: "blue",
   },
   {
-    id: "topic-2-diphthongs",
-    name: "Nguyên âm đôi",
-    description: "Âm trượt - 4 nhóm nguyên âm đôi",
-    orderIndex: 2,
-    totalSoundGroups: 4,
-    color: "purple",
-  },
-  {
-    id: "topic-3-consonants",
+    id: "topic-2-consonants",
     name: "Phụ âm",
-    description: "Khối lượng lớn - 11 nhóm phụ âm",
-    orderIndex: 3,
-    totalSoundGroups: 11,
+    description: "12 nhóm phụ âm theo 5 tầng (Plosives/Fricatives/Affricates/Nasals/Approximants)",
+    orderIndex: 2,
+    unlockThresholdPercent: 80,
+    totalSoundGroups: 12,
     color: "orange",
   },
   {
-    id: "topic-4-hard-pairs",
-    name: "Minimal Pairs khó",
-    description: "Tổng hợp thực chiến - 4 nhóm cặp âm dễ nhầm nhất",
-    orderIndex: 4,
+    id: "topic-3-minimal-pairs-hard",
+    name: "Minimal Pairs Khó",
+    description: "Tổng hợp 4 nhóm cặp âm dễ nhầm nhất (mở khóa sau CĐ2 ≥80%)",
+    orderIndex: 3,
+    unlockThresholdPercent: 80,
     totalSoundGroups: 4,
     color: "red",
+  },
+  {
+    id: "topic-4-stress-connected",
+    name: "Trọng âm & Nối âm",
+    description: "4 nhóm đặc thù: Word Stress, Weak Forms, Linking, Assimilation (mở khóa sau CĐ3 ≥80%)",
+    orderIndex: 4,
+    unlockThresholdPercent: 80,
+    totalSoundGroups: 4,
+    color: "purple",
   },
 ];
 
 // ============================================================================
-// EXERCISE MODES (4 chế độ cho mỗi nhóm)
+// EXERCISE MODES (6: 4 chuẩn cho CĐ1-3 + 2 đặc thù cho CĐ4)
 // ============================================================================
+
+const STANDARD_TOPIC_IDS = ["topic-1-vowels", "topic-2-consonants", "topic-3-minimal-pairs-hard"];
+const STRESS_TOPIC_IDS = ["topic-4-stress-connected"];
 
 export const EXERCISE_MODES: ExerciseModeDefinition[] = [
   {
@@ -99,6 +108,7 @@ export const EXERCISE_MODES: ExerciseModeDefinition[] = [
     questionTypeId: "qtype-1-mc",
     orderIndex: 1,
     icon: "👂",
+    appliesToTopics: STANDARD_TOPIC_IDS,
   },
   {
     id: "speak_word",
@@ -107,6 +117,7 @@ export const EXERCISE_MODES: ExerciseModeDefinition[] = [
     questionTypeId: "qtype-2-voice",
     orderIndex: 2,
     icon: "🗣️",
+    appliesToTopics: STANDARD_TOPIC_IDS,
   },
   {
     id: "speak_minimal_pair",
@@ -115,291 +126,88 @@ export const EXERCISE_MODES: ExerciseModeDefinition[] = [
     questionTypeId: "qtype-3-minimal-pairs",
     orderIndex: 3,
     icon: "⚔️",
+    appliesToTopics: STANDARD_TOPIC_IDS,
   },
   {
     id: "speak_sentence",
     name: "Thực chiến",
     description: "Đọc câu có chứa âm mục tiêu",
-    questionTypeId: "qtype-2-voice", // Same as speak_word but different mode in contentJson
+    questionTypeId: "qtype-2-voice",
     orderIndex: 4,
     icon: "🎯",
+    appliesToTopics: STANDARD_TOPIC_IDS,
+  },
+  {
+    id: "mode_a_listen_choose",
+    name: "Nghe & Chọn",
+    description: "Mode A đặc thù CĐ4: nghe → chọn (tap stress / weak form / linking / assimilation)",
+    questionTypeId: "qtype-2-voice", // placeholder, mỗi nhóm CĐ4 override questionTypeId cụ thể khi seed (SP3)
+    orderIndex: 5,
+    icon: "🎧",
+    appliesToTopics: STRESS_TOPIC_IDS,
+  },
+  {
+    id: "mode_b_speak_match",
+    name: "Đọc & So khớp",
+    description: "Mode B đặc thù CĐ4: đọc → so khớp nhiều dạng (acceptedAnswers)",
+    questionTypeId: "qtype-2-voice",
+    orderIndex: 6,
+    icon: "🗣️",
+    appliesToTopics: STRESS_TOPIC_IDS,
   },
 ];
 
 // ============================================================================
-// SOUND GROUPS (25 nhóm âm)
+// SOUND GROUPS (30 nhóm)
 // ============================================================================
 
 export const SOUND_GROUPS: SoundGroupDefinition[] = [
-  // ============================================================================
-  // TOPIC 1: NGUYÊN ÂM ĐƠN (6 nhóm, 24 bài)
-  // ============================================================================
-  {
-    id: "map-t1-g01-i-ih",
-    topicId: "topic-1-monophthongs",
-    name: "/iː/ & /ɪ/",
-    description: "Dài & ngắn phía trước (ship/sheep)",
-    orderIndex: 1,
-    targetPhonemes: ["/iː/", "/ɪ/"],
-    difficulty: 3,
-    notes: "Cặp cơ bản nhất, người Việt hay gộp thành một âm",
-  },
-  {
-    id: "map-t1-g02-e-ae",
-    topicId: "topic-1-monophthongs",
-    name: "/e/ & /æ/",
-    description: "Hẹp & mở phía trước (bed/bad)",
-    orderIndex: 2,
-    targetPhonemes: ["/e/", "/æ/"],
-    difficulty: 4,
-    notes: "Người Việt hay phát âm /æ/ giống /e/",
-  },
-  {
-    id: "map-t1-g03-central",
-    topicId: "topic-1-monophthongs",
-    name: "/ɑː/ & /ʌ/ & /ə/",
-    description: "Nhóm trung tâm (father/fun/about)",
-    orderIndex: 3,
-    targetPhonemes: ["/ɑː/", "/ʌ/", "/ə/"],
-    difficulty: 5,
-    notes: "Ba âm ở vị trí trung tâm, khác nhau về độ mở và trọng âm",
-  },
-  {
-    id: "map-t1-g04-o-oh",
-    topicId: "topic-1-monophthongs",
-    name: "/ɒ/ & /ɔː/",
-    description: "Tròn ngắn & tròn dài (hot/horse)",
-    orderIndex: 4,
-    targetPhonemes: ["/ɒ/", "/ɔː/"],
-    difficulty: 4,
-    notes: "Âm tròn môi, khác nhau về độ dài",
-  },
-  {
-    id: "map-t1-g05-u-uh",
-    topicId: "topic-1-monophthongs",
-    name: "/ʊ/ & /uː/",
-    description: "Sau ngắn & sau dài (full/fool)",
-    orderIndex: 5,
-    targetPhonemes: ["/ʊ/", "/uː/"],
-    difficulty: 3,
-    notes: "Cặp âm sau, người Việt thường phát âm tốt",
-  },
-  {
-    id: "map-t1-g06-er",
-    topicId: "topic-1-monophthongs",
-    name: "/ɜː/",
-    description: "Âm giữa đặc biệt (bird/word)",
-    orderIndex: 6,
-    targetPhonemes: ["/ɜː/"],
-    difficulty: 6,
-    notes: "Âm đặc biệt không có trong tiếng Việt, cần uốn lưỡi",
-  },
+  // --- CĐ1 NGUYÊN ÂM (10 nhóm: 6 đơn + 4 đôi) ---
+  { id: "map-t1-g01-i-ih", topicId: "topic-1-vowels", name: "/iː/ & /ɪ/", description: "Dài & ngắn phía trước (ship/sheep)", orderIndex: 1, targetPhonemes: ["/iː/", "/ɪ/"], difficulty: 3, notes: "Cặp cơ bản nhất" },
+  { id: "map-t1-g02-e-ae", topicId: "topic-1-vowels", name: "/e/ & /æ/", description: "Hẹp & mở phía trước (bed/bad)", orderIndex: 2, targetPhonemes: ["/e/", "/æ/"], difficulty: 4, notes: "Người Việt hay gộp /æ/ thành /e/" },
+  { id: "map-t1-g03-central", topicId: "topic-1-vowels", name: "/ɑː/ & /ʌ/ & /ə/", description: "Nhóm trung tâm (father/fun/about)", orderIndex: 3, targetPhonemes: ["/ɑː/", "/ʌ/", "/ə/"], difficulty: 5, notes: "Ba âm trung tâm" },
+  { id: "map-t1-g04-o-oh", topicId: "topic-1-vowels", name: "/ɒ/ & /ɔː/", description: "Tròn ngắn & tròn dài (hot/horse)", orderIndex: 4, targetPhonemes: ["/ɒ/", "/ɔː/"], difficulty: 4, notes: "Âm tròn môi" },
+  { id: "map-t1-g05-u-uh", topicId: "topic-1-vowels", name: "/ʊ/ & /uː/", description: "Sau ngắn & sau dài (full/fool)", orderIndex: 5, targetPhonemes: ["/ʊ/", "/uː/"], difficulty: 3, notes: "Cặp âm sau" },
+  { id: "map-t1-g06-er", topicId: "topic-1-vowels", name: "/ɜː/", description: "Âm giữa đặc biệt (bird/word)", orderIndex: 6, targetPhonemes: ["/ɜː/"], difficulty: 6, notes: "Không có trong tiếng Việt" },
+  { id: "map-t1-g07-ei-ai", topicId: "topic-1-vowels", name: "/eɪ/ & /aɪ/", description: "Kết thúc bằng /ɪ/ (day/die)", orderIndex: 7, targetPhonemes: ["/eɪ/", "/aɪ/"], difficulty: 4, notes: "Âm trượt phổ biến" },
+  { id: "map-t1-g08-oi-au", topicId: "topic-1-vowels", name: "/ɔɪ/ & /aʊ/", description: "/ɔɪ/ lên, /aʊ/ xuống-lên (boy/now)", orderIndex: 8, targetPhonemes: ["/ɔɪ/", "/aʊ/"], difficulty: 5, notes: "Hướng di chuyển âm" },
+  { id: "map-t1-g09-ou-ea", topicId: "topic-1-vowels", name: "/əʊ/ & /eə/", description: "Nhóm trung tâm (go/air)", orderIndex: 9, targetPhonemes: ["/əʊ/", "/eə/"], difficulty: 6, notes: "Âm trượt từ/tới schwa" },
+  { id: "map-t1-g10-ia-ua", topicId: "topic-1-vowels", name: "/ɪə/ & /ʊə/", description: "Kết thúc bằng schwa (ear/tour)", orderIndex: 10, targetPhonemes: ["/ɪə/", "/ʊə/"], difficulty: 7, notes: "Âm khó, ít gặp" },
 
-  // ============================================================================
-  // TOPIC 2: NGUYÊN ÂM ĐÔI (4 nhóm, 16 bài)
-  // ============================================================================
-  {
-    id: "map-t2-g01-ei-ai",
-    topicId: "topic-2-diphthongs",
-    name: "/eɪ/ & /aɪ/",
-    description: "Kết thúc bằng /ɪ/ (day/die)",
-    orderIndex: 1,
-    targetPhonemes: ["/eɪ/", "/aɪ/"],
-    difficulty: 4,
-    notes: "Hai âm trượt phổ biến, cần di chuyển miệng rõ ràng",
-  },
-  {
-    id: "map-t2-g02-oi-au",
-    topicId: "topic-2-diphthongs",
-    name: "/ɔɪ/ & /aʊ/",
-    description: "/ɔɪ/ lên, /aʊ/ xuống-lên (boy/now)",
-    orderIndex: 2,
-    targetPhonemes: ["/ɔɪ/", "/aʊ/"],
-    difficulty: 5,
-    notes: "Cần chú ý hướng di chuyển của âm",
-  },
-  {
-    id: "map-t2-g03-ou-ea",
-    topicId: "topic-2-diphthongs",
-    name: "/əʊ/ & /eə/",
-    description: "Nhóm trung tâm (go/air)",
-    orderIndex: 3,
-    targetPhonemes: ["/əʊ/", "/eə/"],
-    difficulty: 6,
-    notes: "Âm trượt từ schwa hoặc tới schwa",
-  },
-  {
-    id: "map-t2-g04-ia-ua",
-    topicId: "topic-2-diphthongs",
-    name: "/ɪə/ & /ʊə/",
-    description: "Kết thúc bằng schwa (ear/tour)",
-    orderIndex: 4,
-    targetPhonemes: ["/ɪə/", "/ʊə/"],
-    difficulty: 7,
-    notes: "Âm khó, ít gặp trong tiếng Anh hiện đại",
-  },
+  // --- CĐ2 PHỤ ÂM (12 nhóm theo 5 tầng) ---
+  // Tầng 1 Plosives
+  { id: "map-t2-g01-p-b", topicId: "topic-2-consonants", name: "/p/ & /b/", description: "Bilabial - hai môi (pen/ben)", orderIndex: 1, targetPhonemes: ["/p/", "/b/"], difficulty: 2, notes: "Cặp vô thanh/hữu thanh cơ bản" },
+  { id: "map-t2-g02-t-d", topicId: "topic-2-consonants", name: "/t/ & /d/", description: "Alveolar tắc (tea/day)", orderIndex: 2, targetPhonemes: ["/t/", "/d/"], difficulty: 3, notes: "Người Việt hay nuốt /t/ /d/ cuối" },
+  { id: "map-t2-g03-k-g", topicId: "topic-2-consonants", name: "/k/ & /g/", description: "Velar (cat/got)", orderIndex: 3, targetPhonemes: ["/k/", "/g/"], difficulty: 3, notes: "Âm từ vòm mềm" },
+  // Tầng 2 Fricatives
+  { id: "map-t2-g04-f-v", topicId: "topic-2-consonants", name: "/f/ & /v/", description: "Labiodental (fan/van)", orderIndex: 4, targetPhonemes: ["/f/", "/v/"], difficulty: 4, notes: "Người Việt nhầm /v/ thành /w/" },
+  { id: "map-t2-g05-th-dh", topicId: "topic-2-consonants", name: "/θ/ & /ð/", description: "Dental - đặt lưỡi giữa răng (think/this)", orderIndex: 5, targetPhonemes: ["/θ/", "/ð/"], difficulty: 8, notes: "Khó nhất người Việt, không có âm răng" },
+  { id: "map-t2-g06-s-z", topicId: "topic-2-consonants", name: "/s/ & /z/", description: "Alveolar xát (see/zoo)", orderIndex: 6, targetPhonemes: ["/s/", "/z/"], difficulty: 3, notes: "/z/ ít gặp trong tiếng Việt" },
+  { id: "map-t2-g07-sh-zh", topicId: "topic-2-consonants", name: "/ʃ/ & /ʒ/", description: "Post-alveolar (ship/measure)", orderIndex: 7, targetPhonemes: ["/ʃ/", "/ʒ/"], difficulty: 5, notes: "/ʒ/ rất hiếm" },
+  { id: "map-t2-g08-h", topicId: "topic-2-consonants", name: "/h/", description: "Glottal - thanh hầu (he/hot)", orderIndex: 8, targetPhonemes: ["/h/"], difficulty: 3, notes: "Không có cặp vô thanh/hữu thanh" },
+  // Tầng 3 Affricates
+  { id: "map-t2-g09-ch-j", topicId: "topic-2-consonants", name: "/tʃ/ & /dʒ/", description: "Affricate post-alveolar (chair/job)", orderIndex: 9, targetPhonemes: ["/tʃ/", "/dʒ/"], difficulty: 4, notes: "Âm kép" },
+  // Tầng 4 Nasals
+  { id: "map-t2-g10-nasals", topicId: "topic-2-consonants", name: "/m/ & /n/ & /ŋ/", description: "Âm mũi (man/now/sing)", orderIndex: 10, targetPhonemes: ["/m/", "/n/", "/ŋ/"], difficulty: 3, notes: "/ŋ/ cuối từ không thêm /g/" },
+  // Tầng 5 Approximants
+  { id: "map-t2-g11-l-r", topicId: "topic-2-consonants", name: "/l/ & /r/", description: "Liquids (light/right)", orderIndex: 11, targetPhonemes: ["/l/", "/r/"], difficulty: 7, notes: "Khó nhất người Việt, /r/ cần uốn lưỡi" },
+  { id: "map-t2-g12-w-j", topicId: "topic-2-consonants", name: "/w/ & /j/", description: "Glides - bán nguyên âm (we/yes)", orderIndex: 12, targetPhonemes: ["/w/", "/j/"], difficulty: 4, notes: "Người Việt nhầm /w/ với /v/, /j/ với /dʒ/" },
 
-  // ============================================================================
-  // TOPIC 3: PHỤ ÂM (11 nhóm, 44 bài)
-  // ============================================================================
-  {
-    id: "map-t3-g01-p-b",
-    topicId: "topic-3-consonants",
-    name: "/p/ & /b/",
-    description: "Bilabial - hai môi (pen/ben)",
-    orderIndex: 1,
-    targetPhonemes: ["/p/", "/b/"],
-    difficulty: 2,
-    notes: "Cặp vô thanh/hữu thanh cơ bản",
-  },
-  {
-    id: "map-t3-g02-t-d",
-    topicId: "topic-3-consonants",
-    name: "/t/ & /d/",
-    description: "Alveolar tắc (tea/day)",
-    orderIndex: 2,
-    targetPhonemes: ["/t/", "/d/"],
-    difficulty: 3,
-    notes: "Người Việt hay nuốt /t/ /d/ cuối từ",
-  },
-  {
-    id: "map-t3-g03-k-g",
-    topicId: "topic-3-consonants",
-    name: "/k/ & /g/",
-    description: "Velar (cat/got)",
-    orderIndex: 3,
-    targetPhonemes: ["/k/", "/g/"],
-    difficulty: 3,
-    notes: "Âm từ vòm mềm, cần chú ý khi ở cuối từ",
-  },
-  {
-    id: "map-t3-g04-f-v",
-    topicId: "topic-3-consonants",
-    name: "/f/ & /v/",
-    description: "Labiodental (fan/van)",
-    orderIndex: 4,
-    targetPhonemes: ["/f/", "/v/"],
-    difficulty: 4,
-    notes: "Người Việt thường nhầm /v/ thành /w/",
-  },
-  {
-    id: "map-t3-g05-s-z",
-    topicId: "topic-3-consonants",
-    name: "/s/ & /z/",
-    description: "Alveolar xát (see/zoo)",
-    orderIndex: 5,
-    targetPhonemes: ["/s/", "/z/"],
-    difficulty: 3,
-    notes: "Cặp vô thanh/hữu thanh, /z/ ít gặp trong tiếng Việt",
-  },
-  {
-    id: "map-t3-g06-sh-zh",
-    topicId: "topic-3-consonants",
-    name: "/ʃ/ & /ʒ/",
-    description: "Palato-alveolar (ship/measure)",
-    orderIndex: 6,
-    targetPhonemes: ["/ʃ/", "/ʒ/"],
-    difficulty: 5,
-    notes: "/ʒ/ rất hiếm, chỉ có trong một số từ",
-  },
-  {
-    id: "map-t3-g07-ch-j",
-    topicId: "topic-3-consonants",
-    name: "/tʃ/ & /dʒ/",
-    description: "Affricate (chair/job)",
-    orderIndex: 7,
-    targetPhonemes: ["/tʃ/", "/dʒ/"],
-    difficulty: 4,
-    notes: "Âm kép, cần phát âm đầy đủ cả hai phần",
-  },
-  {
-    id: "map-t3-g08-th-dh",
-    topicId: "topic-3-consonants",
-    name: "/θ/ & /ð/",
-    description: "Dental - đặt lưỡi giữa răng (think/this)",
-    orderIndex: 8,
-    targetPhonemes: ["/θ/", "/ð/"],
-    difficulty: 8,
-    notes: "Âm khó nhất cho người Việt, không có trong tiếng Việt",
-  },
-  {
-    id: "map-t3-g09-nasals",
-    topicId: "topic-3-consonants",
-    name: "/m/ & /n/ & /ŋ/",
-    description: "Âm mũi (man/now/sing)",
-    orderIndex: 9,
-    targetPhonemes: ["/m/", "/n/", "/ŋ/"],
-    difficulty: 3,
-    notes: "/ŋ/ ở cuối từ, không được thêm /g/",
-  },
-  {
-    id: "map-t3-g10-l-r",
-    topicId: "topic-3-consonants",
-    name: "/l/ & /r/",
-    description: "Tiếp cận (light/right)",
-    orderIndex: 10,
-    targetPhonemes: ["/l/", "/r/"],
-    difficulty: 7,
-    notes: "Cặp khó nhất, /r/ cần uốn lưỡi, /l/ cần đặt lưỡi lên răng",
-  },
-  {
-    id: "map-t3-g11-semi",
-    topicId: "topic-3-consonants",
-    name: "/w/ & /j/ & /h/",
-    description: "Bán nguyên âm & âm hầu (we/yes/he)",
-    orderIndex: 11,
-    targetPhonemes: ["/w/", "/j/", "/h/"],
-    difficulty: 4,
-    notes: "Người Việt hay nhầm /w/ với /v/, /j/ với /dʒ/",
-  },
+  // --- CĐ3 MINIMAL PAIRS KHÓ (4 nhóm) ---
+  { id: "map-t3-g01-front-vowel-mix", topicId: "topic-3-minimal-pairs-hard", name: "Nguyên âm phía trước dễ nhầm", description: "/iː/ vs /ɪ/ vs /e/ vs /æ/ (sheep/ship/shape/sharp)", orderIndex: 1, targetPhonemes: ["/iː/", "/ɪ/", "/e/", "/æ/"], difficulty: 9, notes: "Tổng hợp 4 nguyên âm phía trước" },
+  { id: "map-t3-g02-initial-confuse", topicId: "topic-3-minimal-pairs-hard", name: "Phụ âm đầu từ dễ nhầm", description: "/l/ vs /r/ vs /n/ (light/right/night)", orderIndex: 2, targetPhonemes: ["/l/", "/r/", "/n/"], difficulty: 9, notes: "Lỗi l/n và /r/" },
+  { id: "map-t3-g03-final-drop", topicId: "topic-3-minimal-pairs-hard", name: "Phụ âm cuối từ dễ bỏ", description: "final /p/ vs /b/, /t/ vs /d/, /k/ vs /g/ (cap/cab, cat/cad)", orderIndex: 3, targetPhonemes: ["/p/", "/b/", "/t/", "/d/", "/k/", "/g/"], difficulty: 8, notes: "Người Việt hay nuốt phụ âm cuối" },
+  { id: "map-t3-g04-dental-sibilant", topicId: "topic-3-minimal-pairs-hard", name: "Âm răng & âm xát", description: "/θ/ vs /s/ vs /t/, /ð/ vs /z/ vs /d/ (think/sink, this/diss)", orderIndex: 4, targetPhonemes: ["/θ/", "/s/", "/t/", "/ð/", "/z/", "/d/"], difficulty: 10, notes: "Khó nhất - không có âm răng trong tiếng Việt" },
 
-  // ============================================================================
-  // TOPIC 4: MINIMAL PAIRS KHÓ (4 nhóm, 16 bài) - TỔNG HỢP
-  // ============================================================================
-  {
-    id: "map-t4-g01-front-vowel-mix",
-    topicId: "topic-4-hard-pairs",
-    name: "Nguyên âm phía trước dễ nhầm",
-    description: "/iː/ vs /ɪ/ vs /e/ vs /æ/ (sheep/ship/shape/sharp)",
-    orderIndex: 1,
-    targetPhonemes: ["/iː/", "/ɪ/", "/e/", "/æ/"],
-    difficulty: 9,
-    notes: "Tổng hợp 4 nguyên âm phía trước, người Việt hay gộp thành 1-2 âm",
-  },
-  {
-    id: "map-t4-g02-initial-confuse",
-    topicId: "topic-4-hard-pairs",
-    name: "Phụ âm đầu từ dễ nhầm",
-    description: "/l/ vs /r/ vs /n/ (light/right/night)",
-    orderIndex: 2,
-    targetPhonemes: ["/l/", "/r/", "/n/"],
-    difficulty: 9,
-    notes: "Lỗi l/n và không uốn lưỡi /r/, rất phổ biến",
-  },
-  {
-    id: "map-t4-g03-final-drop",
-    topicId: "topic-4-hard-pairs",
-    name: "Phụ âm cuối từ dễ bỏ",
-    description: "final /p/ vs /b/, /t/ vs /d/, /k/ vs /g/ (cap/cab, cat/cad)",
-    orderIndex: 3,
-    targetPhonemes: ["/p/", "/b/", "/t/", "/d/", "/k/", "/g/"],
-    difficulty: 8,
-    notes: "Người Việt hay nuốt phụ âm cuối, mất âm hữu thanh/vô thanh",
-  },
-  {
-    id: "map-t4-g04-dental-sibilant",
-    topicId: "topic-4-hard-pairs",
-    name: "Âm răng & âm xát",
-    description: "/θ/ vs /s/ vs /t/, /ð/ vs /z/ vs /d/ (think/sink, this/diss)",
-    orderIndex: 4,
-    targetPhonemes: ["/θ/", "/s/", "/t/", "/ð/", "/z/", "/d/"],
-    difficulty: 10,
-    notes: "Khó nhất - không có âm răng trong tiếng Việt",
-  },
+  // --- CĐ4 TRỌNG ÂM & NỐI ÂM (4 nhóm mới) ---
+  { id: "map-t4-g01-word-stress", topicId: "topic-4-stress-connected", name: "Word Stress", description: "Trọng âm từ - nghe & bấm âm tiết nhấn, đọc đúng trọng âm", orderIndex: 1, targetPhonemes: [], difficulty: 6, notes: "Mode A: Tap the Stress. Mode B: đọc từ đúng trọng âm." },
+  { id: "map-t4-g02-weak-forms", topicId: "topic-4-stress-connected", name: "Weak Forms", description: "Âm lướt / từ chức năng - chọn từ đọc lướt /ə/, đọc cả câu", orderIndex: 2, targetPhonemes: ["/ə/"], difficulty: 7, notes: "can/to/for/and/at → /kən/ /tə/ /fə/ /ən/ /ət/" },
+  { id: "map-t4-g03-linking", topicId: "topic-4-stress-connected", name: "Linking", description: "Nối âm - nghe cụm & chọn phát âm đúng, đọc cụm", orderIndex: 3, targetPhonemes: [], difficulty: 7, notes: "C+V: hold on → /həʊl dɒn/. C+C: bad dog → /bæ dɒg/." },
+  { id: "map-t4-g04-assimilation", topicId: "topic-4-stress-connected", name: "Assimilation & Elision", description: "Biến âm & nuốt âm - nghe câu tự nhiên & chọn, đọc câu", orderIndex: 4, targetPhonemes: [], difficulty: 8, notes: "/t/+/j/=/tʃ/: meet you → meetcha. /d/+/j/=/dʒ/: did you → didja." },
 ];
 
 // ============================================================================
-// PHONEMES (Danh sách IPA cần seed)
+// PHONEMES (44 âm IPA - giữ nguyên v1)
 // ============================================================================
 
 export const PHONEMES: PhonemeDefinition[] = [
@@ -416,7 +224,6 @@ export const PHONEMES: PhonemeDefinition[] = [
   { ipa: "/ʊ/", type: "MONOPHTHONG", description: "Nguyên âm sau cao ngắn", exampleWords: ["full", "put", "book"] },
   { ipa: "/uː/", type: "MONOPHTHONG", description: "Nguyên âm sau cao dài", exampleWords: ["fool", "food", "blue"] },
   { ipa: "/ɜː/", type: "MONOPHTHONG", description: "Nguyên âm trung cao dài", exampleWords: ["bird", "word", "nurse"] },
-
   // Diphthongs
   { ipa: "/eɪ/", type: "DIPHTHONG", description: "Nguyên âm đôi", exampleWords: ["day", "make", "they"] },
   { ipa: "/aɪ/", type: "DIPHTHONG", description: "Nguyên âm đôi", exampleWords: ["die", "my", "nice"] },
@@ -426,7 +233,6 @@ export const PHONEMES: PhonemeDefinition[] = [
   { ipa: "/eə/", type: "DIPHTHONG", description: "Nguyên âm đôi", exampleWords: ["air", "care", "there"] },
   { ipa: "/ɪə/", type: "DIPHTHONG", description: "Nguyên âm đôi", exampleWords: ["ear", "here", "fear"] },
   { ipa: "/ʊə/", type: "DIPHTHONG", description: "Nguyên âm đôi", exampleWords: ["tour", "poor", "sure"] },
-
   // Consonants
   { ipa: "/p/", type: "CONSONANT", description: "Phụ âm vô thanh", exampleWords: ["pen", "cup", "happy"] },
   { ipa: "/b/", type: "CONSONANT", description: "Phụ âm hữu thanh", exampleWords: ["ben", "cab", "rabbit"] },
@@ -466,27 +272,15 @@ export function getSoundGroupsByTopic(topicId: string): SoundGroupDefinition[] {
   return SOUND_GROUPS.filter((sg) => sg.topicId === topicId).sort((a, b) => a.orderIndex - b.orderIndex);
 }
 
-export function getAllSoundGroups(): SoundGroupDefinition[] {
-  return SOUND_GROUPS.sort((a, b) => {
-    const topicA = TOPICS.find((t) => t.id === a.topicId);
-    const topicB = TOPICS.find((t) => t.id === b.topicId);
-    if (topicA && topicB && topicA.orderIndex !== topicB.orderIndex) {
-      return topicA.orderIndex - topicB.orderIndex;
-    }
-    return a.orderIndex - b.orderIndex;
-  });
+export function getModesForTopic(topicId: string): ExerciseModeDefinition[] {
+  return EXERCISE_MODES.filter((m) => m.appliesToTopics.includes(topicId)).sort((a, b) => a.orderIndex - b.orderIndex);
 }
 
 export function getPhonemeByIpa(ipa: string): PhonemeDefinition | undefined {
   return PHONEMES.find((p) => p.ipa === ipa);
 }
 
-// Tổng số bài = 25 nhóm × 4 mode = 100 bài
-export const TOTAL_LESSONS = SOUND_GROUPS.length * EXERCISE_MODES.length;
-
-console.log(`📚 Lesson Catalog loaded:`);
-console.log(`   - ${TOPICS.length} Topics`);
-console.log(`   - ${SOUND_GROUPS.length} Sound Groups`);
-console.log(`   - ${EXERCISE_MODES.length} Exercise Modes per group`);
-console.log(`   - ${TOTAL_LESSONS} Total Lessons`);
-console.log(`   - ${PHONEMES.length} Phonemes`);
+// Tổng số bài = sum(ánh xạ nhóm → số mode áp dụng)
+export const TOTAL_LESSONS = SOUND_GROUPS.reduce((sum, sg) => {
+  return sum + getModesForTopic(sg.topicId).length;
+}, 0);
