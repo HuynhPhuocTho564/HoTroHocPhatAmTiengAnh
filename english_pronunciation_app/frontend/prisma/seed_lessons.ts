@@ -905,6 +905,12 @@ async function generateQuestions() {
         const bankContent = bank.contentJson as unknown as Record<string, unknown>;
         const bankMode = (bankContent.mode as string) ?? mode.id;
 
+        // Fix trùng: speak_word + speak_sentence cùng qtype-2-voice (lesson-catalog.ts collision).
+        // Bank items có mode field → chỉ ingest bank item khớp mode của exercise hiện tại,
+        // tránh luyện miệng lẫn câu + thực chiến lẫn từ. listen_choose đã continue trước vòng lặp;
+        // speak_minimal_pair dùng qtype-3-minimal-pairs riêng → không dính.
+        if (bankMode !== mode.id) continue;
+
         // --- listen_choose: cần audio + distractor thật ---
         if (mode.id === "listen_choose") {
           const audioUrl = (bankContent.audioUrl as string) ?? null;
