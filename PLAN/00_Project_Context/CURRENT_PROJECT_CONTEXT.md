@@ -89,3 +89,12 @@ Trạng thái v1 đang chạy: 4 topic, 25 sound group, 44 phoneme, 100 exercise
 - TDD cho logic mới (scoring, gamification, generation). Dọn file/doc không cần TDD.
 - Quality gate trước khi khai báo xong: `npx prisma validate` + `npx tsc --noEmit --pretty false` + `npm test` + `npm run build` — tất cả pass.
 - Seed idempotent (upsert theo id), fetch audio thật cho `sourceType: FREE_API`.
+
+## 9. Nguồn dữ liệu (SP3a, 18/06/2026)
+
+- **IPA**: CMU Pronouncing Dictionary (open data) + Free Dictionary API (verify).
+- **Audio mp3 (từ)**: Free Dictionary API (audio từ Wiktionary, CC-BY-SA 3.0) → tải về `frontend/public/audio/` qua `seed_audio_local.ts` (chạy 1 lần, idempotent). App runtime đọc audio local → tự chứa, không phụ thuộc API → an toàn bảo vệ phản biện.
+- **Audio (câu)**: Web Speech API (`window.speechSynthesis`) runtime, voice cài trên trình duyệt.
+- **Minimal pair / câu**: tự biên soạn (MANUAL), tham khảo phương pháp từ Ship or Sheep (Baker), English Pronunciation in Use (Hancock). KHÔNG copy text/audio sách.
+- **Cambridge/Oxford**: chỉ đối chiếu IPA thủ công, KHÔNG scrape, KHÔNG lưu audio.
+- **Credit**: ghi trong `frontend/README.md` + báo cáo khóa luận.
