@@ -48,7 +48,7 @@ function tokenize(value: string) {
   return normalizeAnswerText(value).split(" ").filter(Boolean);
 }
 
-function calculateWordOverlapAccuracy(expected: string, actual: string) {
+export function calculateWordOverlapAccuracy(expected: string, actual: string) {
   const expectedTokens = tokenize(expected);
   const actualTokens = tokenize(actual);
 

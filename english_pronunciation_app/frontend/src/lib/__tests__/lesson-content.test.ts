@@ -51,3 +51,46 @@ test("không còn id cũ map-t4-g01 / map-t4-g03 trong content", () => {
 test("tổng số nhóm có content >= 10 (3 cũ + 7 mới)", () => {
   assert.ok(Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length >= 10, `Ít nhất 10 nhóm content (hiện ${Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length})`);
 });
+
+// ===== SP3b: CĐ2 (12 nhóm Phụ âm) =====
+
+const CD2_GROUPS = [
+  "map-t2-g01-p-b", "map-t2-g02-t-d", "map-t2-g03-k-g",
+  "map-t2-g04-f-v", "map-t2-g05-th-dh", "map-t2-g06-s-z",
+  "map-t2-g07-sh-zh", "map-t2-g08-h", "map-t2-g09-ch-j",
+  "map-t2-g10-nasals", "map-t2-g11-l-r", "map-t2-g12-w-j",
+];
+
+test("12 nhóm CĐ2 có trong LESSON_CONTENT_BY_SOUND_GROUP", () => {
+  for (const id of CD2_GROUPS) {
+    assert.ok(LESSON_CONTENT_BY_SOUND_GROUP[id as keyof typeof LESSON_CONTENT_BY_SOUND_GROUP], `Thiếu nhóm ${id}`);
+  }
+});
+
+test("mỗi nhóm CĐ2 có words/sentences không rỗng + pairs (trừ g08-h)", () => {
+  for (const id of CD2_GROUPS) {
+    const content = getContentBySoundGroup(id);
+    assert.ok(content, `getContentBySoundGroup(${id}) trả undefined`);
+    assert.ok(content!.words.length >= 10, `${id}: words >= 10 (hiện ${content!.words.length})`);
+    assert.ok(content!.sentences.length >= 4, `${id}: sentences >= 4 (hiện ${content!.sentences.length})`);
+    // g08-h /h/ đơn phoneme không cặp → pairs có thể 0; các nhóm khác >= 6
+    if (id !== "map-t2-g08-h") {
+      assert.ok(content!.minimalPairs.length >= 6, `${id}: pairs >= 6 (hiện ${content!.minimalPairs.length})`);
+    }
+  }
+});
+
+test("mỗi word CĐ2 có soundGroupId khớp + targetPhonemes + ipa bắt đầu /", () => {
+  for (const id of CD2_GROUPS) {
+    const content = getContentBySoundGroup(id);
+    for (const w of content!.words) {
+      assert.equal(w.soundGroupId, id, `word "${w.word}" soundGroupId sai: ${w.soundGroupId} (mong đợi ${id})`);
+      assert.ok(w.targetPhonemes.length > 0, `word "${w.word}" thiếu targetPhonemes`);
+      assert.ok(w.ipa.startsWith("/"), `word "${w.word}" ipa phải bắt đầu bằng /`);
+    }
+  }
+});
+
+test("tổng số nhóm có content >= 22 (12 CD1 + 2 legacy CD3 + 12 CD2)", () => {
+  assert.ok(Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length >= 22, `Ít nhất 22 nhóm content (hiện ${Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length})`);
+});
