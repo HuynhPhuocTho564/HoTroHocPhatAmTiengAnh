@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseWordPrompt, type ExerciseQuestion } from "./ExerciseEngineClient";
 import { useWaveformRecorder, type RecorderLevel } from "@/hooks/useWaveformRecorder";
+import SpeakFeedbackSheet from "./SpeakFeedbackSheet";
 
 type SpeakWordQuestionProps = {
   question: ExerciseQuestion;
@@ -132,8 +133,17 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
         </div>
 
         {/* Tầng 4: Mic + waveform + hint */}
+        {/* Waveform container luôn render (để hook useEffect khởi tạo wavesurfer lúc mount).
+            Ẩn CSS khi không recording/processing để không chiếm chỗ. */}
+        <div
+          ref={recorder.containerRef}
+          className={`rounded-lg bg-neutral-50 p-2 transition-all ${
+            status === "recording" || status === "processing" ? "opacity-100" : "h-0 overflow-hidden opacity-0 py-0"
+          }`}
+        />
+
         {status === "idle" && (
-          <div className="space-y-4 text-center">
+          <div className="mt-6 space-y-4 text-center">
             {speechUnsupported && (
               <div className="rounded-xl border-2 border-warning-300 bg-warning-50 p-4 text-sm font-semibold text-warning-800" role="alert">
                 ⚠️ Trình duyệt chưa hỗ trợ Web Speech API. Hãy dùng Chrome hoặc Edge.
@@ -148,8 +158,7 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
         )}
 
         {status === "recording" && (
-          <div className="space-y-4 text-center">
-            <div ref={recorder.containerRef} className="rounded-lg bg-neutral-50 p-2" />
+          <div className="mt-4 space-y-3 text-center">
             <p className={`text-sm font-bold ${hint.color}`}>{hint.text}</p>
             <button type="button" onClick={stopRecording}
               className="rounded-xl bg-neutral-200 px-8 py-3 font-bold text-neutral-700 transition-colors hover:bg-neutral-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-400">
@@ -159,8 +168,7 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
         )}
 
         {status === "processing" && (
-          <div className="space-y-4 text-center">
-            <div ref={recorder.containerRef} className="rounded-lg bg-neutral-50 p-2 opacity-60" />
+          <div className="mt-4 space-y-3 text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
             <p className="text-sm font-semibold text-neutral-600">Đang phân tích giọng nói...</p>
           </div>
@@ -180,50 +188,15 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
           </div>
         )}
 
-        {status === "correct" && (
-          <div className="space-y-4">
-            <div className="text-center text-6xl">🎉</div>
-            <div className="rounded-xl border-2 border-success-300 bg-success-50 p-6 text-center">
-              <h3 className="text-2xl font-black text-success-700">Xuất sắc!</h3>
-              <p className="mt-2 text-sm text-neutral-600">Bạn nói:</p>
-              <p className="text-xl font-bold text-success-700">"{transcript}"</p>
-              <p className="mt-1 text-sm text-neutral-600">Đáp án:</p>
-              <p className="text-lg font-semibold text-neutral-800">"{question.answer}"</p>
-            </div>
-            <button type="button" onClick={() => onNext(true, transcript)}
-              className="w-full rounded-xl bg-success-600 px-8 py-4 text-lg font-bold text-white hover:bg-success-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-300">
-              Tiếp theo →
-            </button>
-          </div>
-        )}
-
-        {status === "incorrect" && (
-          <div className="space-y-4">
-            <div className="text-center text-5xl">😐</div>
-            <div className="rounded-xl border-2 border-error-300 bg-error-50 p-6 text-center">
-              <h3 className="text-xl font-bold text-error-700">Chưa chính xác</h3>
-              {retryCount > 0 && <p className="mt-1 text-sm text-neutral-500">Lần thử: {retryCount + 1}</p>}
-              <p className="mt-2 text-sm text-neutral-600">Bạn nói:</p>
-              <p className="text-xl font-bold text-error-700">"{transcript || "Không rõ"}"</p>
-              <p className="mt-1 text-sm text-neutral-600">Đáp án đúng:</p>
-              <p className="text-lg font-semibold text-neutral-800">"{question.answer}"</p>
-            </div>
-            {contentData.hint && (
-              <div className="rounded-xl border-2 border-primary-200 bg-primary-50 p-4 text-center">
-                <p className="text-sm font-semibold text-primary-800">💡 {contentData.hint}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={startRecording}
-                className="rounded-xl border-2 border-primary-300 bg-primary-50 px-6 py-4 font-bold text-primary-700 hover:bg-primary-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300">
-                🔄 Thử lại
-              </button>
-              <button type="button" onClick={() => onNext(false, transcript)}
-                className="rounded-xl border-2 border-neutral-300 bg-white px-6 py-4 font-bold text-neutral-600 hover:bg-neutral-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-300">
-                Bỏ qua →
-              </button>
-            </div>
-          </div>
+        {(status === "correct" || status === "incorrect") && (
+          <SpeakFeedbackSheet
+            isCorrect={status === "correct"}
+            transcript={transcript}
+            answerText={question.answer}
+            audioReplay={<AudioButton audioUrl={contentData.audioUrl} label="🔊 Nghe lại mẫu" />}
+            onRetry={startRecording}
+            onNext={() => onNext(status === "correct", transcript)}
+          />
         )}
       </div>
     </div>
