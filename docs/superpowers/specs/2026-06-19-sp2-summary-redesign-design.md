@@ -32,9 +32,11 @@ Submit API response (`api/exercises/submit/route.ts:262-305`): `exerciseScore, r
 - **streak expose**: thêm select `streakCount/longestStreak` trong submit route + thêm vào response. **Xử lý SP2.** (KHÔNG update streak ở submit — streak chỉ update ở check-in, giữ nguyên.)
 - **tada**: đã có từ SP1 (`sfx.ts` `playSfx("tada")`) → tái dụng. **Xử lý SP2.**
 
-**Defer (ra khỏi SP2):**
-- Metric mode-specific WPM (Mode D) + per-phoneme coloring (Mode B) — SP3 (cần engine align mới + timing instrumentation).
-- "Luyện âm /θ/ cụ thể" (actionable advice theo phoneme sai nhiều nhất) — cần route bài tập theo phoneme, chưa có. SP2 dùng [Làm lại bài này] thay thế (YAGNI).
+**Defer (ra khỏi SP2) — NOTE sửa 19/06: mô tả gốc dưới đây SAI thực tế, giữ để audit:**
+- ~~"Metric mode-specific WPM (Mode D) + per-phoneme coloring (Mode B) — SP3"~~ → **SAI**: Mode D KHÔNG tồn tại (chỉ 6 mode: listen_choose/speak_word/speak_minimal_pair/speak_sentence/mode_a_listen_choose/mode_b_speak_match). Mode B là CĐ4 read&match `acceptedAnswers`, không per-phoneme. Per-phoneme coloring **đã có** trong listen_choose (`ListenFeedbackSheet.tsx:55-66`). WPM = tính năng mới phải xây từ đầu (timing instrumentation + `fluencyScore` scoring), không phải "metric mode-specific".
+- "Luyện âm /θ/ cụ thể" (actionable advice theo phoneme sai nhiều nhất) — cần route bài tập theo phoneme, chưa có. **ĐÚNG** — feature thực sự (B). SP2 dùng [Làm lại bài này] thay thế (YAGNI).
+
+SP3 thực sự = 2-3 sub-project độc lập (mỗi cái 1 spec riêng): A WPM/fluency mode mới, B route theo phoneme (khuyến nghị), C coloring polish. Chi tiết: `PLAN/00_Project_Context/CURRENT_PROJECT_CONTEXT.md` mục 11.
 
 ## 3. Hướng A — Tách component + expose API nhỏ + confetti
 
