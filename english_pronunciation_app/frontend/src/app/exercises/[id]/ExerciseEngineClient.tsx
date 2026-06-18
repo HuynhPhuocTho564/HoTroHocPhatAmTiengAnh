@@ -8,6 +8,7 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import { playSfx, useSfxMuted } from "@/lib/sfx";
 import { useComboStreak } from "@/hooks/useComboStreak";
 import ListenFeedbackSheet from "./ListenFeedbackSheet";
+import ExerciseSummaryScreen from "./ExerciseSummaryScreen";
 
 type ExerciseQuestionOption = {
   id: string;
@@ -24,7 +25,7 @@ export type ExerciseQuestion = {
   options: ExerciseQuestionOption[];
 };
 
-type ExerciseData = {
+export type ExerciseData = {
   id: string;
   name: string;
   description: string | null;
@@ -59,7 +60,7 @@ type SubmitAnswer = {
   timeSpent?: number | null;
 };
 
-type SubmitResult = {
+export type SubmitResult = {
   exerciseAttemptId: string;
   exerciseScore: number;
   isCompleted: boolean;
@@ -77,9 +78,15 @@ type SubmitResult = {
     level: number;
     nextLevelXp: number;
   };
+  badgesAwarded: Array<{ id: string; name: string; type: string }>;
+  previousBestScore: number | null;
+  streak: {
+    count: number;
+    longest: number;
+  };
 };
 
-type IncorrectQuestion = {
+export type IncorrectQuestion = {
   question: ExerciseQuestion;
   selected: string;
   correct: string;
@@ -183,20 +190,6 @@ function parsePairPrompt(content: string): [WordPrompt, WordPrompt] {
     { word: words[0] ?? "Word 1" },
     { word: words[1] ?? "Word 2" },
   ];
-}
-
-function formatQuestionWord(question: ExerciseQuestion) {
-  try {
-    const parsed = JSON.parse(question.content);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => item.word).filter(Boolean).join(" & ");
-    }
-    if (parsed?.word) return String(parsed.word);
-  } catch {
-    // Plain text fallback below.
-  }
-
-  return question.content;
 }
 
 function createRecognition(
@@ -1063,95 +1056,30 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
   }
 
   if (isFinished) {
-    const correctCount = questions.length - incorrectQuestions.length;
-    const percent = Math.round((correctCount / questions.length) * 100);
-    const isPassed = percent >= 80;
+    if (!submitResult) {
+      return (
+        <div className="flex min-h-screen flex-col items-center bg-neutral-50 p-6 sm:p-8">
+          <Card className="w-full max-w-2xl space-y-8 p-8 text-center sm:p-12">
+            <p className="text-lg font-bold text-neutral-700">
+              {submitStatus === "error"
+                ? submitError || "Không lưu được kết quả."
+                : "Đang lưu kết quả..."}
+            </p>
+          </Card>
+        </div>
+      );
+    }
 
     return (
-      <div className="flex min-h-screen flex-col items-center bg-neutral-50 p-6 sm:p-8">
-        <Card className="w-full max-w-2xl space-y-8 p-8 text-center sm:p-12">
-          <div
-            className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-4xl font-black ${
-              isPassed ? "bg-success-50 text-success-700" : "bg-warning-50 text-warning-700"
-            }`}
-            aria-hidden="true"
-          >
-            {isPassed ? "OK" : "!"}
-          </div>
-
-          <h1 className="text-3xl font-bold text-neutral-900">{isPassed ? "Hoàn thành bài tập" : "Cần luyện thêm"}</h1>
-
-          <div className="mx-auto inline-block w-full max-w-sm rounded-xl border border-neutral-200 bg-neutral-100 p-6">
-            <p className="mb-2 text-lg font-medium text-neutral-700">
-              Đúng {correctCount}/{questions.length} câu - {percent}%
-            </p>
-            <ProgressBar value={percent} max={100} color={isPassed ? "success" : "warning"} size="lg" />
-            <p className={`mt-2 text-sm font-bold ${isPassed ? "text-success-700" : "text-warning-700"}`}>
-              {isPassed ? "Kết quả tốt" : "Hãy thử lại để cải thiện"}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left">
-            {submitStatus === "submitting" && (
-              <p className="text-sm font-medium text-neutral-600" role="status">
-                Đang lưu kết quả và tính XP...
-              </p>
-            )}
-
-            {submitStatus === "success" && submitResult && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-neutral-800">Kết quả đã lưu</span>
-                  <span className="rounded-full bg-success-50 px-3 py-1 text-sm font-bold text-success-700">
-                    {submitResult.exerciseScore}/100
-                  </span>
-                </div>
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-lg bg-primary-50 p-3 text-primary-700">
-                    <dt className="font-semibold">XP</dt>
-                    <dd className="text-xl font-bold">+{submitResult.rewards.totalXpEarned}</dd>
-                  </div>
-                  <div className="rounded-lg bg-warning-50 p-3 text-warning-700">
-                    <dt className="font-semibold">Điểm hạng</dt>
-                    <dd className="text-xl font-bold">+{submitResult.rewards.totalRankingDelta}</dd>
-                  </div>
-                </dl>
-                <p className="text-sm text-neutral-600">
-                  Level hiện tại: <span className="font-bold text-neutral-900">{submitResult.progress.level}</span> - XP:{" "}
-                  <span className="font-bold text-neutral-900">{submitResult.progress.currentXp}</span>
-                </p>
-              </div>
-            )}
-
-            {submitStatus === "error" && (
-              <div className="rounded-lg bg-warning-50 p-4 text-sm text-warning-800" role="alert">
-                {submitError || "Kết quả local đã có, nhưng chưa lưu được vào database."}
-              </div>
-            )}
-          </div>
-
-          {incorrectQuestions.length > 0 && (
-            <div className="rounded-xl border border-error-200 bg-error-50 p-6 text-left">
-              <h2 className="mb-4 text-lg font-bold text-error-800">Câu cần luyện lại</h2>
-              <ul className="space-y-4">
-                {incorrectQuestions.map((item, index) => (
-                  <li key={`${item.question.id}-${index}`} className="rounded-lg border border-error-100 bg-white p-4">
-                    <p className="font-bold text-neutral-900">"{formatQuestionWord(item.question)}"</p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Bạn trả lời <span className="font-bold text-error-700">{item.selected || "Không rõ"}</span>, đáp án đúng là{" "}
-                      <span className="font-bold text-success-700">{item.correct}</span>.
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <Button className="mt-8 h-14 w-full text-lg" onClick={() => router.push("/learning_map")}>
-            Quay về lộ trình
-          </Button>
-        </Card>
-      </div>
+      <ExerciseSummaryScreen
+        exercise={exercise}
+        submitResult={submitResult}
+        incorrectQuestions={incorrectQuestions}
+        submitStatus={submitStatus}
+        submitError={submitError}
+        onRetry={() => window.location.reload()}
+        onExit={() => router.push("/learning_map")}
+      />
     );
   }
 

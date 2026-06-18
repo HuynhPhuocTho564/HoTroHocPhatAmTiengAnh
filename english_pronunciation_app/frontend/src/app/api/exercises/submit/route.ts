@@ -94,6 +94,8 @@ export async function POST(request: NextRequest) {
         id: true,
         xp: true,
         level: true,
+        streakCount: true,
+        longestStreak: true,
       },
     });
 
@@ -295,6 +297,11 @@ export async function POST(request: NextRequest) {
           xpEarned: result.dailyActivity.xpEarned,
         },
         badgesAwarded: result.badgesAwarded,
+        previousBestScore: previousBestAttempt?.score ?? null,
+        streak: {
+          count: user.streakCount,
+          longest: user.longestStreak,
+        },
         questionResults: questionResults.map((questionResult) => ({
           questionId: questionResult.questionId,
           isCorrect: questionResult.isCorrect,
