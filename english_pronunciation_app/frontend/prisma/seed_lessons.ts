@@ -214,6 +214,7 @@ async function seedSoundGroups() {
         orderIndex: sg.orderIndex,
         status: "DRAFT", // Mặc định DRAFT; sẽ chuyển ACTIVE khi có content đầy đủ
         topicId: sg.topicId,
+        subcategory: sg.subcategory,
       },
       create: {
         id: sg.id,
@@ -222,6 +223,7 @@ async function seedSoundGroups() {
         orderIndex: sg.orderIndex,
         status: "DRAFT",
         topicId: sg.topicId,
+        subcategory: sg.subcategory,
       },
     });
 
@@ -658,12 +660,14 @@ async function generateLearningMaps() {
         name: sg.name,
         requirement: sg.description,
         status: hasContent ? "ACTIVE" : "DRAFT",
+        subcategory: sg.subcategory,
       },
       create: {
         id: mapId,
         name: sg.name,
         requirement: sg.description,
         status: hasContent ? "ACTIVE" : "DRAFT",
+        subcategory: sg.subcategory,
       },
     });
   }

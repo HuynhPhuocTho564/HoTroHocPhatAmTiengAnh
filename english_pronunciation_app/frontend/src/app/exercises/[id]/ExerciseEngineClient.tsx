@@ -1080,11 +1080,11 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
         <button
           type="button"
-          onClick={() => router.back()}
-          aria-label="Quay lại trang trước"
-          className="rounded-lg p-2 text-xl font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
+          onClick={() => router.push("/learning_map")}
+          aria-label="Quay về lộ trình"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
         >
-          X
+          <span aria-hidden="true">←</span> Lộ trình
         </button>
         <div className="mx-4 max-w-2xl flex-1">
           <ProgressBar value={progressPercent} max={100} size="lg" showPercentage={false} label={`Câu ${currentIndex + 1}/${questions.length}`} />

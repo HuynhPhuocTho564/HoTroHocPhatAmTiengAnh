@@ -74,6 +74,7 @@ model LearningMap {
   name        String // TenBanDo
   requirement String? // YeuCauBanDo
   status      String  @default("ACTIVE") // TrangThaiBanDo
+  subcategory String? // v2: nhóm con trong topic (inherit từ SoundGroup khi seed). null = không phân nhóm.
 
   exercises  Exercise[]
   progresses Progress[]
@@ -234,6 +235,7 @@ model SoundGroup {
   description String?
   orderIndex  Int      @default(0)
   status      String   @default("DRAFT") // DRAFT, NEEDS_REVIEW, ACTIVE, ARCHIVED
+  subcategory String?  // v2: nhóm con trong topic (vd "Nguyên âm đơn", "Plosives"). null = không phân nhóm.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

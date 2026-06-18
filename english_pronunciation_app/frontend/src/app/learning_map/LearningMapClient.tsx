@@ -22,6 +22,7 @@ export type LearningMapUI = {
   name: string;
   requirement: string | null;
   status: string;
+  subcategory: string | null;
   exercises: ExerciseUI[];
 };
 
@@ -132,6 +133,22 @@ function getMapStats(map: LearningMapUI) {
   const completed = map.exercises.filter((exercise) => exercise.isCompleted).length;
 
   return { completed, total };
+}
+
+function groupMapsBySubcategory(maps: LearningMapUI[]) {
+  // Gom maps theo subcategory, giữ thứ tự xuất hiện (maps đã sort theo id ở page.tsx).
+  // null → nhóm "không phân loại", UI render phẳng (cho CĐ3/4).
+  const groups: { subcategory: string | null; maps: LearningMapUI[] }[] = [];
+  for (const map of maps) {
+    const key = map.subcategory ?? null;
+    const existing = groups.find((g) => g.subcategory === key);
+    if (existing) {
+      existing.maps.push(map);
+    } else {
+      groups.push({ subcategory: key, maps: [map] });
+    }
+  }
+  return groups;
 }
 
 export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
@@ -273,50 +290,64 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
                 <p className="mt-2 text-neutral-600">Chủ đề này hiện chưa có bài tập trong database.</p>
               </Card>
             ) : (
-              <section className="grid grid-cols-1 gap-5 md:grid-cols-2" aria-label="Danh sách nhóm âm">
-                {selectedTopic.maps.map((map) => {
-                  const stats = getMapStats(map);
-                  const disabled = map.status !== "ACTIVE" || stats.total === 0;
+              <div className="space-y-10">
+                {groupMapsBySubcategory(selectedTopic.maps).map((group) => (
+                  <section
+                    key={group.subcategory ?? "default"}
+                    aria-label={group.subcategory ?? "Danh sách nhóm âm"}
+                  >
+                    {group.subcategory && (
+                      <h3 className="mb-4 text-xl font-bold tracking-tight text-neutral-900">
+                        {group.subcategory}
+                      </h3>
+                    )}
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      {group.maps.map((map) => {
+                        const stats = getMapStats(map);
+                        const disabled = map.status !== "ACTIVE" || stats.total === 0;
 
-                  return (
-                    <button
-                      key={map.id}
-                      type="button"
-                      onClick={() => setSelectedMap(map)}
-                      disabled={disabled}
-                      className="rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:border-neutral-200 disabled:hover:shadow-sm"
-                      aria-label={`Mở nhóm âm ${map.name}`}
-                    >
-                      <div className="mb-4 flex items-start justify-between gap-4">
-                        <h2 className="text-xl font-bold text-neutral-900">{map.name}</h2>
-                        <div className="flex shrink-0 flex-col items-end gap-2">
-                          <Badge variant={getRequirementVariant(map.requirement)} size="sm">
-                            {map.requirement || "Chưa phân loại"}
-                          </Badge>
-                          {map.status !== "ACTIVE" && (
-                            <Badge variant={getStatusVariant(map.status)} size="sm">
-                              {getStatusLabel(map.status)}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <p className="mb-5 text-neutral-600">
-                        {stats.total} dạng bài tập, {stats.completed} bài đã đạt từ 70 điểm.
-                      </p>
-                      <ProgressBar
-                        value={stats.completed}
-                        max={Math.max(stats.total, 1)}
-                        label={`${stats.completed}/${stats.total} bài hoàn thành`}
-                        color={stats.completed === stats.total && stats.total > 0 ? "success" : "primary"}
-                        showPercentage={stats.total > 0}
-                      />
-                      <div className="mt-5 text-sm font-bold text-primary-700">
-                        {disabled ? "Nội dung chưa sẵn sàng" : "Xem bài tập"}
-                      </div>
-                    </button>
-                  );
-                })}
-              </section>
+                        return (
+                          <button
+                            key={map.id}
+                            type="button"
+                            onClick={() => setSelectedMap(map)}
+                            disabled={disabled}
+                            className="rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:border-neutral-200 disabled:hover:shadow-sm"
+                            aria-label={`Mở nhóm âm ${map.name}`}
+                          >
+                            <div className="mb-4 flex items-start justify-between gap-4">
+                              <h2 className="text-xl font-bold text-neutral-900">{map.name}</h2>
+                              <div className="flex shrink-0 flex-col items-end gap-2">
+                                <Badge variant={getRequirementVariant(map.requirement)} size="sm">
+                                  {map.requirement || "Chưa phân loại"}
+                                </Badge>
+                                {map.status !== "ACTIVE" && (
+                                  <Badge variant={getStatusVariant(map.status)} size="sm">
+                                    {getStatusLabel(map.status)}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="mb-5 text-neutral-600">
+                              {stats.total} dạng bài tập, {stats.completed} bài đã đạt từ 70 điểm.
+                            </p>
+                            <ProgressBar
+                              value={stats.completed}
+                              max={Math.max(stats.total, 1)}
+                              label={`${stats.completed}/${stats.total} bài hoàn thành`}
+                              color={stats.completed === stats.total && stats.total > 0 ? "success" : "primary"}
+                              showPercentage={stats.total > 0}
+                            />
+                            <div className="mt-5 text-sm font-bold text-primary-700">
+                              {disabled ? "Nội dung chưa sẵn sàng" : "Xem bài tập"}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
             )}
           </>
         )}

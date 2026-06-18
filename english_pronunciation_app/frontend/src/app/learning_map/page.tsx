@@ -24,6 +24,7 @@ export default async function LearningMapPage() {
                 name: true,
                 requirement: true,
                 status: true,
+                subcategory: true,
               },
             },
             _count: {
@@ -64,6 +65,7 @@ export default async function LearningMapPage() {
           name: exercise.map.name,
           requirement: exercise.map.requirement,
           status: exercise.map.status,
+          subcategory: exercise.map.subcategory,
           exercises: [],
         });
       }

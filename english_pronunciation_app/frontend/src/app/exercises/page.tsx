@@ -51,6 +51,14 @@ export default async function ExercisesPage() {
   return (
     <div className="min-h-screen bg-neutral-50 py-12 px-4 sm:px-6 lg:px-8">
       <main className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <Link
+            href="/learning_map"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-700 transition-colors hover:border-primary-300 hover:text-primary-700"
+          >
+            <span aria-hidden="true">←</span> Lộ trình
+          </Link>
+        </div>
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-neutral-900 mb-3">Bài tập luyện phát âm</h1>
           <p className="text-lg text-neutral-600">

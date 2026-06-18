@@ -69,3 +69,34 @@ test("tổng số bài = 112 (CĐ1-3: 26 nhóm × 4 mode = 104; CĐ4: 4 nhóm ×
 test("catalog có 44 phoneme", () => {
   assert.equal(PHONEMES.length, 44);
 });
+
+test("CĐ1 chia 2 subcategory: 6 Nguyên âm đơn + 4 Nguyên âm đôi (không null)", () => {
+  const vowels = getSoundGroupsByTopic("topic-1-vowels");
+  const don = vowels.filter((sg) => sg.subcategory === "Nguyên âm đơn");
+  const doi = vowels.filter((sg) => sg.subcategory === "Nguyên âm đôi");
+  assert.equal(don.length, 6);
+  assert.equal(doi.length, 4);
+  for (const sg of vowels) {
+    assert.ok(sg.subcategory, `${sg.id} thiếu subcategory`);
+  }
+});
+
+test("CĐ2 chia 5 tầng subcategory: Plosives(3)/Fricatives(5)/Affricates(1)/Nasals(1)/Approximants(2)", () => {
+  const cons = getSoundGroupsByTopic("topic-2-consonants");
+  const bySub = (name: string) => cons.filter((sg) => sg.subcategory === name);
+  assert.equal(bySub("Plosives").length, 3);
+  assert.equal(bySub("Fricatives").length, 5);
+  assert.equal(bySub("Affricates").length, 1);
+  assert.equal(bySub("Nasals").length, 1);
+  assert.equal(bySub("Approximants").length, 2);
+  for (const sg of cons) {
+    assert.ok(sg.subcategory, `${sg.id} thiếu subcategory`);
+  }
+});
+
+test("CĐ3/4 subcategory null (chưa phân tầng)", () => {
+  const cd3 = getSoundGroupsByTopic("topic-3-minimal-pairs-hard");
+  const cd4 = getSoundGroupsByTopic("topic-4-stress-connected");
+  for (const sg of cd3) assert.equal(sg.subcategory, null, `${sg.id} phải null`);
+  for (const sg of cd4) assert.equal(sg.subcategory, null, `${sg.id} phải null`);
+});
