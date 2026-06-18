@@ -454,9 +454,31 @@ function VoiceQuestion({
         </div>
 
         {/* Audio sample button */}
-        {(status === "idle" || status === "error" || status === "incorrect") && contentData.audioUrl && (
-          <div className="mb-6 flex justify-center">
-            <AudioButton audioUrl={contentData.audioUrl} label="🔊 Nghe phát âm mẫu" />
+        {(status === "idle" || status === "error" || status === "incorrect") && (
+          <div className="mb-6 flex justify-center gap-3">
+            {contentData.audioUrl && (
+              <AudioButton audioUrl={contentData.audioUrl} label="🔊 Nghe phát âm mẫu" />
+            )}
+            {isSentenceMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+                  const utter = new SpeechSynthesisUtterance(question.answer);
+                  utter.lang = "en-US";
+                  // Ưu tiên voice en-US/en-UK có trên máy
+                  const voices = window.speechSynthesis.getVoices();
+                  const enVoice = voices.find((v) => v.lang === "en-US") || voices.find((v) => v.lang.startsWith("en"));
+                  if (enVoice) utter.voice = enVoice;
+                  window.speechSynthesis.cancel();
+                  window.speechSynthesis.speak(utter);
+                }}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-accent-200 bg-accent-50 px-4 py-2 text-sm font-bold text-accent-700 transition-colors hover:bg-accent-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500"
+                aria-label="Nghe mẫu câu bằng giọng trình duyệt"
+              >
+                🎧 Nghe mẫu câu
+              </button>
+            )}
           </div>
         )}
 
