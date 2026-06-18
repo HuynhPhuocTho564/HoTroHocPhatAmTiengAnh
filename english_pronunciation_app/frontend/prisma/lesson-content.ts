@@ -556,7 +556,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "sheep",
     ipa: "/ʃiːp/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/iː/"],
     difficulty: 6,
     exampleSentence: "Look at those sheep on the hill.",
@@ -566,7 +566,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "ship",
     ipa: "/ʃɪp/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/ɪ/"],
     difficulty: 6,
     exampleSentence: "The ship is leaving the port.",
@@ -576,7 +576,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "shape",
     ipa: "/ʃeɪp/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/eɪ/"],
     difficulty: 7,
     exampleSentence: "What shape is this object?",
@@ -586,7 +586,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "sharp",
     ipa: "/ʃɑːp/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/ɑː/"],
     difficulty: 7,
     exampleSentence: "Be careful, the knife is sharp.",
@@ -596,7 +596,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "beat",
     ipa: "/biːt/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/iː/"],
     difficulty: 6,
     exampleSentence: "Don't beat the drum too loud.",
@@ -606,7 +606,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "bit",
     ipa: "/bɪt/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/ɪ/"],
     difficulty: 6,
     exampleSentence: "I ate a bit of cake.",
@@ -616,7 +616,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "bet",
     ipa: "/bet/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/e/"],
     difficulty: 6,
     exampleSentence: "I bet you can't do it.",
@@ -626,7 +626,7 @@ export const WORDS_T4_G01_FRONT_MIX: WordItemData[] = [
   {
     word: "bat",
     ipa: "/bæt/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetPhonemes: ["/æ/"],
     difficulty: 6,
     exampleSentence: "He hit the ball with a bat.",
@@ -641,7 +641,7 @@ export const MINIMAL_PAIRS_T4_G01: MinimalPairData[] = [
     ipa1: "/ʃiːp/",
     word2: "ship",
     ipa2: "/ʃɪp/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     contrastPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 7,
     explanation: "Tổng hợp: 4 nguyên âm phía trước khác nhau",
@@ -653,7 +653,7 @@ export const MINIMAL_PAIRS_T4_G01: MinimalPairData[] = [
     ipa1: "/biːt/",
     word2: "bit",
     ipa2: "/bɪt/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     contrastPhonemes: ["/iː/", "/ɪ/"],
     difficulty: 7,
     status: "ACTIVE",
@@ -664,7 +664,7 @@ export const MINIMAL_PAIRS_T4_G01: MinimalPairData[] = [
     ipa1: "/bɪt/",
     word2: "bet",
     ipa2: "/bet/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     contrastPhonemes: ["/ɪ/", "/e/"],
     difficulty: 7,
     status: "ACTIVE",
@@ -675,7 +675,7 @@ export const MINIMAL_PAIRS_T4_G01: MinimalPairData[] = [
     ipa1: "/bet/",
     word2: "bat",
     ipa2: "/bæt/",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     contrastPhonemes: ["/e/", "/æ/"],
     difficulty: 7,
     status: "ACTIVE",
@@ -686,7 +686,7 @@ export const MINIMAL_PAIRS_T4_G01: MinimalPairData[] = [
 export const SENTENCES_T4_G01: SentenceItemData[] = [
   {
     sentence: "The sheep on the ship have an odd shape.",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetWords: ["sheep", "ship", "shape"],
     targetPhonemes: ["/iː/", "/ɪ/", "/eɪ/"],
     difficulty: 8,
@@ -696,7 +696,7 @@ export const SENTENCES_T4_G01: SentenceItemData[] = [
   },
   {
     sentence: "I beat the bit with a bat after I bet.",
-    soundGroupId: "map-t4-g01-front-vowel-mix",
+    soundGroupId: "map-t3-g01-front-vowel-mix",
     targetWords: ["beat", "bit", "bat", "bet"],
     targetPhonemes: ["/iː/", "/ɪ/", "/æ/", "/e/"],
     difficulty: 9,
@@ -714,7 +714,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "cap",
     ipa: "/kæp/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/p/"],
     difficulty: 7,
     exampleSentence: "He wears a red cap.",
@@ -724,7 +724,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "cab",
     ipa: "/kæb/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/b/"],
     difficulty: 7,
     exampleSentence: "Call a cab for me.",
@@ -734,7 +734,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "cat",
     ipa: "/kæt/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/t/"],
     difficulty: 7,
     exampleSentence: "The cat is sleeping.",
@@ -744,7 +744,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "cad",
     ipa: "/kæd/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/d/"],
     difficulty: 7,
     exampleSentence: "He's a real cad.",
@@ -754,7 +754,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "back",
     ipa: "/bæk/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/k/"],
     difficulty: 7,
     exampleSentence: "Come back here!",
@@ -764,7 +764,7 @@ export const WORDS_T4_G03_FINAL: WordItemData[] = [
   {
     word: "bag",
     ipa: "/bæg/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetPhonemes: ["/g/"],
     difficulty: 7,
     exampleSentence: "Put it in the bag.",
@@ -779,7 +779,7 @@ export const MINIMAL_PAIRS_T4_G03: MinimalPairData[] = [
     ipa1: "/kæp/",
     word2: "cab",
     ipa2: "/kæb/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     contrastPhonemes: ["/p/", "/b/"],
     difficulty: 8,
     explanation: "Phụ âm cuối vô thanh vs hữu thanh - người Việt hay bỏ",
@@ -791,7 +791,7 @@ export const MINIMAL_PAIRS_T4_G03: MinimalPairData[] = [
     ipa1: "/kæt/",
     word2: "cad",
     ipa2: "/kæd/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     contrastPhonemes: ["/t/", "/d/"],
     difficulty: 8,
     status: "ACTIVE",
@@ -802,7 +802,7 @@ export const MINIMAL_PAIRS_T4_G03: MinimalPairData[] = [
     ipa1: "/bæk/",
     word2: "bag",
     ipa2: "/bæg/",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     contrastPhonemes: ["/k/", "/g/"],
     difficulty: 8,
     status: "ACTIVE",
@@ -813,7 +813,7 @@ export const MINIMAL_PAIRS_T4_G03: MinimalPairData[] = [
 export const SENTENCES_T4_G03: SentenceItemData[] = [
   {
     sentence: "Put the cap in the cab before you go back.",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetWords: ["cap", "cab", "back"],
     targetPhonemes: ["/p/", "/b/", "/k/"],
     difficulty: 9,
@@ -823,7 +823,7 @@ export const SENTENCES_T4_G03: SentenceItemData[] = [
   },
   {
     sentence: "The cat sat in the bag with my cap.",
-    soundGroupId: "map-t4-g03-final-drop",
+    soundGroupId: "map-t3-g03-final-drop",
     targetWords: ["cat", "sat", "bag", "cap"],
     targetPhonemes: ["/t/", "/t/", "/g/", "/p/"],
     difficulty: 9,
@@ -852,12 +852,12 @@ export const LESSON_CONTENT_BY_SOUND_GROUP = {
     minimalPairs: MINIMAL_PAIRS_T1_G04,
     sentences: SENTENCES_T1_G04,
   },
-  "map-t4-g01-front-vowel-mix": {
+  "map-t3-g01-front-vowel-mix": {
     words: WORDS_T4_G01_FRONT_MIX,
     minimalPairs: MINIMAL_PAIRS_T4_G01,
     sentences: SENTENCES_T4_G01,
   },
-  "map-t4-g03-final-drop": {
+  "map-t3-g03-final-drop": {
     words: WORDS_T4_G03_FINAL,
     minimalPairs: MINIMAL_PAIRS_T4_G03,
     sentences: SENTENCES_T4_G03,

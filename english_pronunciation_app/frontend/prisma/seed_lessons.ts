@@ -29,6 +29,7 @@ import {
   SOUND_GROUPS,
   EXERCISE_MODES,
   PHONEMES,
+  getModesForTopic,
 } from "./lesson-catalog";
 import {
   LESSON_CONTENT_BY_SOUND_GROUP,
@@ -117,6 +118,27 @@ async function seedQuestionTypes() {
       name: "Đọc cặp từ",
       description: "Đọc cặp minimal pair để phân biệt âm",
     },
+    // v2: 4 QuestionType mới cho Chủ đề 4 Trọng âm & Nối âm
+    {
+      id: "qtype-4-tap-stress",
+      name: "Chọn âm tiết nhấn",
+      description: "Word Stress Mode A: nghe từ → bấm âm tiết được nhấn",
+    },
+    {
+      id: "qtype-5-choose-weak",
+      name: "Chọn từ lướt",
+      description: "Weak Forms Mode A: nghe câu → chọn từ bị đọc lướt thành /ə/",
+    },
+    {
+      id: "qtype-6-choose-linking",
+      name: "Chọn phát âm nối",
+      description: "Linking Mode A: nghe cụm từ → chọn cách phát âm đúng",
+    },
+    {
+      id: "qtype-7-choose-assimilation",
+      name: "Chọn câu biến âm",
+      description: "Assimilation Mode A: nghe câu tự nhiên → chọn câu vừa nghe",
+    },
   ];
 
   for (const qt of questionTypes) {
@@ -131,7 +153,7 @@ async function seedQuestionTypes() {
 }
 
 async function seedTopics() {
-  console.log("📚 Seeding Topics (4 chủ đề)...");
+  console.log("📚 Seeding Topics (4 chủ đề v2, unlock tuần tự)...");
 
   for (const topic of TOPICS) {
     await prisma.topic.upsert({
@@ -139,16 +161,20 @@ async function seedTopics() {
       update: {
         name: topic.name,
         description: topic.description,
+        orderIndex: topic.orderIndex,
+        unlockThresholdPercent: topic.unlockThresholdPercent,
       },
       create: {
         id: topic.id,
         name: topic.name,
         description: topic.description,
+        orderIndex: topic.orderIndex,
+        unlockThresholdPercent: topic.unlockThresholdPercent,
       },
     });
   }
 
-  console.log(`   ✓ ${TOPICS.length} Topics created (chỉ 4, không còn topic cũ)`);
+  console.log(`   ✓ ${TOPICS.length} Topics created (unlock: 0/80/80/80)`);
 }
 
 async function seedPhonemes() {
@@ -646,7 +672,7 @@ async function generateLearningMaps() {
 }
 
 async function generateExercises() {
-  console.log("📋 Generating Exercises (4 modes per sound group)...");
+  console.log("📋 Generating Exercises (mode theo topic của nhóm)...");
 
   const defaultLevel = await ensureDefaultLevel();
   let totalExercises = 0;
@@ -655,8 +681,10 @@ async function generateExercises() {
     const mapId = `map-${sg.id}`;
     const content = getContentBySoundGroup(sg.id);
     const hasContent = Boolean(content && content.words.length > 0);
+    // v2: mode theo topic (CĐ1-3: 4 mode chuẩn; CĐ4: 2 mode đặc thù)
+    const modesForTopic = getModesForTopic(sg.topicId);
 
-    for (const mode of EXERCISE_MODES) {
+    for (const mode of modesForTopic) {
       const exerciseId = generateExerciseId(sg.id, mode.id);
       const exerciseName = `${sg.name} - ${mode.name}`;
 
@@ -687,7 +715,7 @@ async function generateExercises() {
     }
   }
 
-  console.log(`   ✓ ${totalExercises} Exercises generated (topicId gán theo sound group)`);
+  console.log(`   ✓ ${totalExercises} Exercises generated (topicId gán đúng, mode theo topic)`);
 }
 
 // ============================================================================
