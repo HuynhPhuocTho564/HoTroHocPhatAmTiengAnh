@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type ExerciseQuestion } from "./ExerciseEngineClient";
 import { useWaveformRecorder, type RecorderLevel } from "@/hooks/useWaveformRecorder";
+import SpeakFeedbackSheet from "./SpeakFeedbackSheet";
 
 type SpeakMinimalPairsQuestionProps = {
   question: ExerciseQuestion;
@@ -223,35 +224,27 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
             className="w-full rounded-xl border-2 border-warning-500 bg-warning-500 px-8 py-5 text-xl font-black uppercase tracking-widest text-white transition-all hover:bg-warning-600 hover:shadow-lg focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-300 disabled:cursor-not-allowed disabled:opacity-50">
             {overallStatus === "processing" ? "⏳ Đang kiểm tra..." : canCheck ? "✓ Kiểm tra kết quả" : "⚠️ Hãy đọc cả 2 từ"}
           </button>
-        ) : overallStatus === "correct" ? (
-          <div className="space-y-6 text-center">
-            <div className="text-7xl">🎉</div>
-            <h3 className="text-3xl font-black text-success-600">Xuất sắc!</h3>
-            <p className="text-neutral-600">Bạn đã phân biệt đúng 2 từ</p>
-            <button type="button" onClick={() => onNext(true, combinedTranscript)}
-              className="rounded-xl border-2 border-success-500 bg-success-500 px-10 py-4 text-lg font-bold text-white hover:bg-success-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-success-300">
-              Tiếp theo →
-            </button>
-          </div>
         ) : (
-          <div className="space-y-6 text-center">
-            <div className="text-6xl">😐</div>
-            <h3 className="text-2xl font-black text-error-600">Chưa chính xác</h3>
-            <div className="rounded-xl border-2 border-error-300 bg-error-50 p-5">
-              <p className="text-sm font-semibold text-neutral-600">Đáp án đúng:</p>
-              <p className="mt-2 text-xl font-bold text-neutral-900">{pairs[0].word} & {pairs[1].word}</p>
-            </div>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <button type="button" onClick={() => { setOverallStatus("idle"); setStatuses(["idle", "idle"]); setTranscripts(["", ""]); recorder0.reset(); recorder1.reset(); }}
-                className="rounded-xl border-2 border-primary-400 bg-primary-500 px-8 py-4 font-bold text-white hover:bg-primary-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300">
-                🔄 Làm lại
-              </button>
-              <button type="button" onClick={() => onNext(false, combinedTranscript)}
-                className="rounded-xl border-2 border-neutral-300 bg-white px-8 py-4 font-bold text-neutral-600 hover:bg-neutral-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-300">
-                Bỏ qua →
-              </button>
-            </div>
-          </div>
+          <SpeakFeedbackSheet
+            isCorrect={overallStatus === "correct"}
+            transcript={combinedTranscript}
+            answerText={`${pairs[0].word} & ${pairs[1].word}`}
+            retryLabel="Làm lại cả 2"
+            audioReplay={
+              <div className="flex flex-wrap items-center gap-2">
+                <AudioButton audioUrl={pairs[0].audioUrl} label={`🔊 ${pairs[0].word}`} />
+                <AudioButton audioUrl={pairs[1].audioUrl} label={`🔊 ${pairs[1].word}`} />
+              </div>
+            }
+            onRetry={() => {
+              setOverallStatus("idle");
+              setStatuses(["idle", "idle"]);
+              setTranscripts(["", ""]);
+              recorder0.reset();
+              recorder1.reset();
+            }}
+            onNext={() => onNext(overallStatus === "correct", combinedTranscript)}
+          />
         )}
       </div>
     </div>
