@@ -20,9 +20,10 @@ Phần thực chiến (speak_sentence) hiện **không hiện IPA câu**. User m
 ## 2. Nguồn IPA + bản quyền
 
 - **CMU Pronouncing Dictionary** (open data) — verify IPA word-level.
-- **Free Dictionary API** (Wiktionary CC-BY-SA) — IPA + audio UK (RP).
-- **Tự biên soạn RP** cho sentence-level (weak form + linking + stress) — **không copy** từ Ship or Sheep / English Pronunciation in Use (sách chỉ tham khảo phương pháp, policy bản quyền đã ghi trong DATA_SEED_PLAN).
-- **Chuẩn:** British RP (nhất quán `WordItem.ipa` hiện tại + audio UK).
+- **Free Dictionary API** (Wiktionary CC-BY-SA) — IPA + audio.
+- **Tự biên soạn GA** cho sentence-level (weak form + linking + stress) — **không copy** từ Ship or Sheep / English Pronunciation in Use (sách chỉ tham khảo phương pháp, policy bản quyền đã ghi trong DATA_SEED_PLAN).
+- **Chuẩn:** American GA (General American) — người dùng giọng Mỹ, rhotic (/r/ đọc rõ), không length mark (/i/ không /iː/).
+- **Format:** 1 cặp `/ /` ngoài cho cả câu, từ cách nhau khoảng trắng, giữ dấu stress `ˈ`. Ví dụ: `/ðə ˈʃip ər ɑn ðə ˈʃɪp/`.
 
 ## 3. Thiết kế — Data layer
 
@@ -47,14 +48,14 @@ Optional vì pilot — 79 câu còn lại chưa có IPA (defer). Consistent vớ
 
 ### Pilot data — 4 câu `SENTENCES_T1_G01` (map-t1-g01-i-ih)
 
-| # | Câu | IPA (RP) | Pedagogy note |
+| # | Câu | IPA (GA) | Pedagogy note |
 |---|---|---|---|
-| 1 | "The sheep are on the ship." | /ðə ˈʃiːp ə ɒn ðə ˈʃɪp/ | "are" weak /ə/; "the" /ðə/; stress sheep+ship |
-| 2 | "I feel sick when I sit here." | /aɪ ˈfiːl sɪk wen aɪ sɪt hɪə/ | "I" /aɪ/ strong (đầu câu); "here" /hɪə/ non-rhotic |
-| 3 | "Please take your seat and sit down." | /pliːz ˈteɪk jə siːt ən sɪt ˈdaʊn/ | "your" weak /jə/; "and" weak /ən/; stress seat+down |
-| 4 | "The heat will hit us soon." | /ðə hiːt wɪl hɪt əs ˈsuːn/ | "will" weak /wɪl/; "us" /əs/; stress heat+soon |
+| 1 | "The sheep are on the ship." | /ðə ˈʃip ər ɑn ðə ˈʃɪp/ | "are" weak /ər/ rhotic; "the" /ðə/; stress sheep+ship |
+| 2 | "I feel sick when I sit here." | /aɪ ˈfil sɪk wɛn aɪ sɪt hɪr/ | "I" /aɪ/ strong (đầu câu); "here" /hɪr/ rhotic |
+| 3 | "Please take your seat and sit down." | /pliz ˈteɪk jər sit ən sɪt ˈdaʊn/ | "your" weak /jər/ rhotic; "and" weak /ən/; stress seat+down |
+| 4 | "The heat will hit us soon." | /ðə hit wɪl hɪt əs ˈsun/ | "will" weak /wɪl/; "us" /əs/; stress heat+soon |
 
-Target phonemes /iː/ vs /ɪ/ nổi bật (sheep/ship, feel/sick, seat/sit, heat/hit).
+Target phonemes /i/ vs /ɪ/ nổi bật (sheep/ship, feel/sick, seat/sit, heat/hit). GA: không length mark, rhotic /r/.
 
 ## 4. Thiết kế — Seed propagate (2 chỗ)
 
