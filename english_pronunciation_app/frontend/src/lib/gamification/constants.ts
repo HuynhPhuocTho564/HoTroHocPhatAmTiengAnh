@@ -32,6 +32,8 @@ export const CONFETTI_COLORS = [
 ];
 
 // === Streak Fire Thresholds ===
+// Weekly doubling pattern: 3 days → 1 week → 2 weeks → 1 month
+// Each tier unlocks a bigger fire animation to reward consistency.
 export const STREAK_FIRE_SMALL = 3;
 export const STREAK_FIRE_MEDIUM = 7;
 export const STREAK_FIRE_LARGE = 14;
@@ -40,3 +42,20 @@ export const STREAK_FIRE_DRAGON = 30;
 // === Level Up Colors ===
 export const LEVEL_UP_GOLD = "#F59E0B";
 export const LEVEL_UP_GLOW = "rgba(245, 158, 11, 0.4)";
+
+// === Time Constants (milliseconds) ===
+export const MS_PER_DAY = 86_400_000;
+export const MS_PER_HOUR = 3_600_000;
+
+// === Spin Wheel Animation ===
+// Must stay in sync: CSS transition duration in SpinWheel.tsx uses this value as seconds
+export const SPIN_ANIMATION_MS = 3500;
+export const MIN_FULL_SPINS = 3;
+export const EXTRA_SPINS_RANGE = 3;
+
+// === Mastery Formula Weights ===
+// Completion weighted higher (60%) because consistent practice
+// matters more than perfect scores for long-term retention.
+export const COMPLETION_WEIGHT = 0.6;
+export const SCORE_WEIGHT = 0.4;
+export const MAX_EXERCISE_SCORE = 100;

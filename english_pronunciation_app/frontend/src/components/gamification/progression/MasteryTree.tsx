@@ -8,32 +8,13 @@ interface MasteryTreeProps {
   topics: TopicMastery[];
 }
 
-/** Get Tailwind color class for mastery tier */
-function getTierColor(tier: MasteryNode["tier"]) {
-  switch (tier) {
-    case "gold":
-      return "bg-amber-400 text-amber-900";
-    case "silver":
-      return "bg-blue-400 text-blue-900";
-    case "bronze":
-      return "bg-orange-300 text-orange-800";
-    default:
-      return "bg-neutral-200 text-neutral-500";
-  }
-}
-
-function getProgressBarColor(tier: MasteryNode["tier"]) {
-  switch (tier) {
-    case "gold":
-      return "bg-amber-400";
-    case "silver":
-      return "bg-blue-400";
-    case "bronze":
-      return "bg-orange-300";
-    default:
-      return "bg-neutral-200";
-  }
-}
+/** Tailwind classes per mastery tier — node (circle) + bar (progress) */
+const TIER_STYLES: Record<MasteryNode["tier"], { node: string; bar: string }> = {
+  gold:   { node: "bg-amber-400 text-amber-900", bar: "bg-amber-400" },
+  silver: { node: "bg-blue-400 text-blue-900",   bar: "bg-blue-400" },
+  bronze: { node: "bg-orange-300 text-orange-800", bar: "bg-orange-300" },
+  none:   { node: "bg-neutral-200 text-neutral-500", bar: "bg-neutral-200" },
+};
 
 /**
  * MasteryTree — Visual skill tree showing mastery % per topic/sound group.
@@ -109,13 +90,13 @@ export default function MasteryTree({ topics }: MasteryTreeProps) {
                 <div className="ml-6 mt-1 space-y-2 border-l-2 border-neutral-200 pl-4">
                   {topic.soundGroups.map((sg) => (
                     <div key={sg.soundGroupId} className="flex items-center gap-2 py-1">
-                      <div className={`h-3 w-3 rounded-full ${getTierColor(sg.tier)}`} />
+                      <div className={`h-3 w-3 rounded-full ${TIER_STYLES[sg.tier].node}`} />
                       <span className="flex-1 text-xs text-neutral-700 truncate">
                         {sg.name}
                       </span>
                       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
                         <div
-                          className={`h-full rounded-full ${getProgressBarColor(sg.tier)}`}
+                          className={`h-full rounded-full ${TIER_STYLES[sg.tier].bar}`}
                           style={{ width: `${sg.percentage}%` }}
                         />
                       </div>

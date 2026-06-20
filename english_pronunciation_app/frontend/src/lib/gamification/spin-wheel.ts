@@ -6,6 +6,12 @@
  * @module gamification/spin-wheel
  */
 
+import { MIN_FULL_SPINS, EXTRA_SPINS_RANGE } from "./constants";
+
+// Prize pool — weights sum to 100 for easy probability reasoning.
+// Expected value per spin ≈ 14 gems (weighted avg).
+// Jackpot (1%) is intentionally rare to create excitement.
+
 export type SpinPrize = {
   id: string;
   label: string;
@@ -64,8 +70,8 @@ export function spinWheel(): { prize: SpinPrize; rotationDegrees: number } {
   for (const prize of SPIN_WHEEL_PRIZES) {
     cumulative += prize.weight;
     if (rand < cumulative) {
-      // Calculate rotation: 3-5 full spins + offset to land on the prize
-      const fullSpins = 3 + Math.floor(Math.random() * 3);
+      // Calculate rotation: full spins + offset to land on the prize
+      const fullSpins = MIN_FULL_SPINS + Math.floor(Math.random() * EXTRA_SPINS_RANGE);
       const targetAngle = 360 - prize.angle; // counter-clockwise to land on prize
       const rotationDegrees = fullSpins * 360 + targetAngle;
       return { prize, rotationDegrees };

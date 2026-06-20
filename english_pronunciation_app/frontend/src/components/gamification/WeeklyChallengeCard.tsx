@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { MS_PER_DAY, MS_PER_HOUR } from "@/lib/gamification/constants";
 
 type ChallengeData = {
   challenge: {
@@ -66,8 +67,8 @@ export default function WeeklyChallengeCard() {
         setTimeLeft("Đã kết thúc");
         return;
       }
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
+      const days = Math.floor(diff / MS_PER_DAY);
+      const hours = Math.floor((diff % MS_PER_DAY) / MS_PER_HOUR);
       setTimeLeft(`${days} ngày ${hours} giờ`);
     };
 

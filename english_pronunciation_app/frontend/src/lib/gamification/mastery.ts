@@ -7,6 +7,8 @@
  * @module gamification/mastery
  */
 
+import { COMPLETION_WEIGHT, SCORE_WEIGHT, MAX_EXERCISE_SCORE } from "./constants";
+
 /**
  * Compute mastery percentage for a sound group.
  *
@@ -24,9 +26,9 @@ export function computeMasteryPercentage(
   if (totalExercises === 0) return 0;
 
   const completionWeight = Math.min(1, completedExercises / totalExercises);
-  const scoreWeight = Math.min(1, avgScore / 100);
+  const scoreWeight = Math.min(1, avgScore / MAX_EXERCISE_SCORE);
 
-  return Math.round((completionWeight * 0.6 + scoreWeight * 0.4) * 100);
+  return Math.round((completionWeight * COMPLETION_WEIGHT + scoreWeight * SCORE_WEIGHT) * 100);
 }
 
 /**
@@ -56,3 +58,77 @@ export type TopicMastery = {
   overallPercentage: number;
   soundGroups: MasteryNode[];
 };
+
+// --- Input shapes for buildMasteryData ---
+
+type TopicRow = {
+  id: string;
+  name: string;
+  orderIndex: number;
+  soundGroups: Array<{
+    id: string;
+    name: string;
+    subcategory: string | null;
+    _count: { questionBankItems: number };
+  }>;
+};
+
+type AttemptRow = {
+  exerciseId: string;
+  score: number;
+  exercise: {
+    map: {
+      subcategory: string | null;
+      exercises: { id: string }[];
+    } | null;
+  };
+};
+
+/**
+ * Build mastery data for all topics from raw Prisma query results.
+ * Pure function — no DB access, easy to test.
+ */
+export function buildMasteryData(
+  topics: TopicRow[],
+  userAttempts: AttemptRow[],
+): TopicMastery[] {
+  return topics.map((topic) => {
+    const soundGroups: MasteryNode[] = topic.soundGroups.map((sg) => {
+      const totalExercises = Math.max(1, sg._count.questionBankItems);
+
+      const groupAttempts = userAttempts.filter(
+        (a) => a.exercise.map?.subcategory === sg.subcategory,
+      );
+      const completedExercises = new Set(groupAttempts.map((a) => a.exerciseId)).size;
+      const avgScore =
+        groupAttempts.length > 0
+          ? groupAttempts.reduce((sum, a) => sum + a.score, 0) / groupAttempts.length
+          : 0;
+
+      const percentage = computeMasteryPercentage(completedExercises, totalExercises, avgScore);
+
+      return {
+        soundGroupId: sg.id,
+        name: sg.name,
+        topicName: topic.name,
+        percentage,
+        tier: getMasteryTier(percentage),
+        totalExercises,
+        completedExercises,
+      };
+    });
+
+    const overallPercentage =
+      soundGroups.length > 0
+        ? Math.round(soundGroups.reduce((sum, sg) => sum + sg.percentage, 0) / soundGroups.length)
+        : 0;
+
+    return {
+      topicId: topic.id,
+      topicName: topic.name,
+      orderIndex: topic.orderIndex,
+      overallPercentage,
+      soundGroups,
+    };
+  });
+}

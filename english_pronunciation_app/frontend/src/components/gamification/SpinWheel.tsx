@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { SPIN_WHEEL_PRIZES } from "@/lib/gamification/spin-wheel";
+import { SPIN_ANIMATION_MS } from "@/lib/gamification/constants";
 import { useRewardEvents } from "./effects/RewardEventContext";
 
 type SpinResult = {
@@ -71,7 +72,7 @@ export default function SpinWheel() {
           emit({ type: "streak_milestone", label: "Nhận Bùa Đóng Băng!", icon: "❄️" });
         }
         setSpinning(false);
-      }, 3500);
+      }, SPIN_ANIMATION_MS);
     } catch {
       setError("Lỗi kết nối, thử lại sau");
       setSpinning(false);
@@ -108,7 +109,7 @@ export default function SpinWheel() {
           className="relative h-52 w-52 rounded-full border-4 border-purple-300 shadow-lg"
           style={{
             transform: `rotate(${rotation}deg)`,
-            transition: spinning ? "transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
+            transition: spinning ? `transform ${SPIN_ANIMATION_MS / 1000}s cubic-bezier(0.17, 0.67, 0.12, 0.99)` : "none",
           }}
         >
           {SPIN_WHEEL_PRIZES.map((prize, i) => {

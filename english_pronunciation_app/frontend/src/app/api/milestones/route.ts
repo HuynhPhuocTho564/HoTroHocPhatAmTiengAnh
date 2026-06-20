@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import {
   getAllMilestones,
   getUnclaimedMilestones,
@@ -17,12 +18,10 @@ export async function GET() {
     return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED" } }, { status: 401 });
   }
 
-  const user = await import("@/lib/prisma").then(({ prisma }) =>
-    prisma.user.findUnique({
-      where: { id: session.user!.id },
-      select: { level: true },
-    }),
-  );
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { level: true },
+  });
 
   const [allMilestones, unclaimed, nextMilestone] = await Promise.all([
     getAllMilestones(),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { canSpin, spinWheel } from "@/lib/gamification/spin-wheel";
+import { canSpin, spinWheel, SPIN_ELIGIBLE_STREAK } from "@/lib/gamification/spin-wheel";
 
 /**
  * POST /api/spin-wheel
@@ -38,9 +38,9 @@ export async function POST() {
       {
         success: false,
         error: {
-          code: user.streakCount < 3 ? "STREAK_TOO_LOW" : "ALREADY_SPUN_TODAY",
-          message: user.streakCount < 3
-            ? "Cần chuỗi 3 ngày liên tiếp để quay"
+          code: user.streakCount < SPIN_ELIGIBLE_STREAK ? "STREAK_TOO_LOW" : "ALREADY_SPUN_TODAY",
+          message: user.streakCount < SPIN_ELIGIBLE_STREAK
+            ? `Cần chuỗi ${SPIN_ELIGIBLE_STREAK} ngày liên tiếp để quay`
             : "Bạn đã quay hôm nay rồi",
         },
       },

@@ -6,7 +6,16 @@
  * @module gamification/weekly-challenge
  */
 
-/** Challenge template pool — randomly assigned each week */
+import { MS_PER_DAY } from "./constants";
+
+/**
+ * Challenge template pool — randomly assigned each week.
+ * Reward gems are calibrated to challenge difficulty:
+ * - 7-day streak (200) = high effort, high reward
+ * - 10 exercises (150) = moderate effort
+ * - 5 perfect scores (250) = highest effort, highest reward
+ * - 500 XP weekly (100) = easiest, lowest reward
+ */
 const CHALLENGE_TEMPLATES = [
   {
     title: "7 ngày liên tiếp",
@@ -47,7 +56,7 @@ export function getCurrentWeekKey(date: Date = new Date()): string {
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / 7);
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 

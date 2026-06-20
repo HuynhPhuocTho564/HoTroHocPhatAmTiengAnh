@@ -25,14 +25,17 @@ export type MilestoneStatus = {
   claimed: boolean;
 };
 
-/**
- * Get all milestone rewards from DB, sorted by level ascending.
- */
-export async function getAllMilestones(): Promise<MilestoneInfo[]> {
-  const rows = await prisma.milestoneReward.findMany({
-    orderBy: { level: "asc" },
-  });
-  return rows.map((r) => ({
+/** Map a Prisma MilestoneReward row to the public MilestoneInfo type. */
+function toMilestoneInfo(r: {
+  id: string;
+  level: number;
+  gemsReward: number;
+  badgeName: string | null;
+  unlockType: string | null;
+  title: string;
+  description: string;
+}): MilestoneInfo {
+  return {
     id: r.id,
     level: r.level,
     gemsReward: r.gemsReward,
@@ -40,7 +43,17 @@ export async function getAllMilestones(): Promise<MilestoneInfo[]> {
     unlockType: r.unlockType,
     title: r.title,
     description: r.description,
-  }));
+  };
+}
+
+/**
+ * Get all milestone rewards from DB, sorted by level ascending.
+ */
+export async function getAllMilestones(): Promise<MilestoneInfo[]> {
+  const rows = await prisma.milestoneReward.findMany({
+    orderBy: { level: "asc" },
+  });
+  return rows.map(toMilestoneInfo);
 }
 
 /**
@@ -61,17 +74,7 @@ export async function getUnclaimedMilestones(
   });
   const claimedSet = new Set(claimedIds.map((c) => c.milestoneId));
 
-  return allMilestones
-    .filter((m) => !claimedSet.has(m.id))
-    .map((r) => ({
-      id: r.id,
-      level: r.level,
-      gemsReward: r.gemsReward,
-      badgeName: r.badgeName,
-      unlockType: r.unlockType,
-      title: r.title,
-      description: r.description,
-    }));
+  return allMilestones.filter((m) => !claimedSet.has(m.id)).map(toMilestoneInfo);
 }
 
 /**
@@ -85,44 +88,64 @@ export async function getNextMilestone(
     orderBy: { level: "asc" },
   });
   if (!row) return null;
-  return {
-    id: row.id,
-    level: row.level,
-    gemsReward: row.gemsReward,
-    badgeName: row.badgeName,
-    unlockType: row.unlockType,
-    title: row.title,
-    description: row.description,
-  };
+  return toMilestoneInfo(row);
+}
+
+/** Result type for claim validation — pure, no DB dependency. */
+export type ClaimValidation =
+  | { ok: true }
+  | { ok: false; error: "MILESTONE_NOT_FOUND" | "USER_NOT_FOUND" | "LEVEL_NOT_REACHED" | "ALREADY_CLAIMED" };
+
+/**
+ * Pure validation for milestone claims — no DB calls.
+ * Extracted from claimMilestone() for testability without Prisma mock.
+ *
+ * @param milestone  The milestone row (null if not found in DB)
+ * @param user       The user row with { level } (null if not found)
+ * @param alreadyClaimed  Whether a UserMilestone record exists
+ */
+export function validateClaim(
+  milestone: { level: number } | null,
+  user: { level: number } | null,
+  alreadyClaimed: boolean,
+): ClaimValidation {
+  if (!milestone) return { ok: false, error: "MILESTONE_NOT_FOUND" };
+  if (!user) return { ok: false, error: "USER_NOT_FOUND" };
+  if (user.level < milestone.level) return { ok: false, error: "LEVEL_NOT_REACHED" };
+  if (alreadyClaimed) return { ok: false, error: "ALREADY_CLAIMED" };
+  return { ok: true };
 }
 
 /**
  * Claim a milestone reward for a user.
  * Awards gems + optional badge. Returns the reward details.
+ *
+ * Validation logic is delegated to validateClaim() (pure, testable).
  */
 export async function claimMilestone(
   userId: string,
   milestoneId: string,
 ): Promise<{ gems: number; badgeName: string | null } | { error: string }> {
-  // Verify milestone exists and user qualifies
+  // Fetch data needed for validation
   const milestone = await prisma.milestoneReward.findUnique({
     where: { id: milestoneId },
   });
-  if (!milestone) return { error: "MILESTONE_NOT_FOUND" };
 
-  // Check user level
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { level: true, gems: true },
   });
-  if (!user) return { error: "USER_NOT_FOUND" };
-  if (user.level < milestone.level) return { error: "LEVEL_NOT_REACHED" };
 
-  // Check not already claimed
   const existing = await prisma.userMilestone.findUnique({
     where: { userId_milestoneId: { userId, milestoneId } },
   });
-  if (existing) return { error: "ALREADY_CLAIMED" };
+
+  // Pure validation (testable without DB)
+  const validation = validateClaim(milestone, user, existing !== null);
+  if (!validation.ok) return { error: validation.error };
+
+  // After validation passes, milestone and user are guaranteed non-null
+  const { gemsReward, badgeName } = milestone!;
 
   // Claim: create UserMilestone + award gems in transaction
   await prisma.$transaction(async (tx) => {
@@ -131,13 +154,15 @@ export async function claimMilestone(
     });
     await tx.user.update({
       where: { id: userId },
-      data: { gems: { increment: milestone.gemsReward } },
+      data: { gems: { increment: gemsReward } },
     });
 
-    // Award badge if badgeName is set
-    if (milestone.badgeName) {
+    // Award badge if badgeName is set.
+    // Lookup by name (not ID) because milestones.seed defines badge names,
+    // not IDs. Silently skip if badge not yet seeded — not a critical error.
+    if (badgeName) {
       const badge = await tx.badge.findFirst({
-        where: { name: milestone.badgeName },
+        where: { name: badgeName },
         select: { id: true },
       });
       if (badge) {
@@ -150,5 +175,5 @@ export async function claimMilestone(
     }
   });
 
-  return { gems: milestone.gemsReward, badgeName: milestone.badgeName };
+  return { gems: gemsReward, badgeName };
 }

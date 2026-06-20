@@ -7,6 +7,15 @@ import {
   generateChallengeForWeek,
 } from "@/lib/gamification/weekly-challenge";
 
+/** Shared Prisma include for top participants with user info */
+const PARTICIPANTS_INCLUDE = {
+  participants: {
+    orderBy: { progress: "desc" as const },
+    take: 5,
+    include: { user: { select: { username: true, avatarUrl: true } } },
+  },
+};
+
 /**
  * GET /api/weekly-challenges
  *
@@ -26,13 +35,7 @@ export async function GET() {
   const template = generateChallengeForWeek(weekKey);
   let challenge = await prisma.weeklyChallenge.findUnique({
     where: { weekKey },
-    include: {
-      participants: {
-        orderBy: { progress: "desc" },
-        take: 5,
-        include: { user: { select: { username: true, avatarUrl: true } } },
-      },
-    },
+    include: PARTICIPANTS_INCLUDE,
   });
 
   if (!challenge) {
@@ -47,13 +50,7 @@ export async function GET() {
         startsAt: start,
         endsAt: end,
       },
-      include: {
-        participants: {
-          orderBy: { progress: "desc" },
-          take: 5,
-          include: { user: { select: { username: true, avatarUrl: true } } },
-        },
-      },
+      include: PARTICIPANTS_INCLUDE,
     });
   }
 
