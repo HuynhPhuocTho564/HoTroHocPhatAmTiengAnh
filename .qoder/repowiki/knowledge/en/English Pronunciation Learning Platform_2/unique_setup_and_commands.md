@@ -1,0 +1,3 @@
+- **Audio Seeding:** Local audio assets are not committed; they must be downloaded via `npx tsx prisma/seed_audio_local.ts` before development.
+- **Database Initialization:** Requires `npx prisma db push` followed by `npm run db:seed:lessons` to populate topics, phonemes, and exercises.
+- **Environment:** Requires `DATABASE_URL` in `.env` pointing to a PostgreSQL instance.

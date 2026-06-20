@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import SignOutButton from "./SignOutButton";
+import GemsDisplay from "@/components/gamification/GemsDisplay";
 
 export type NavbarLink = {
   href: string;
@@ -13,6 +14,7 @@ export type NavbarLink = {
 type NavbarUser = {
   username: string;
   avatarUrl: string;
+  gems: number;
 };
 
 type NavbarClientProps = {
@@ -106,6 +108,7 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
 
                   {user ? (
                     <>
+                      <GemsDisplay initialGems={user.gems} />
                       <Link
                         href="/dashboard"
                         aria-label={`Mở dashboard của ${user.username}`}

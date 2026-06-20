@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { TOPICS } from "../../../prisma/lesson-catalog";
 import LearningMapClient, { type LearningMapUI, type TopicUI } from "./LearningMapClient";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +111,33 @@ export default async function LearningMapPage() {
       maps,
     };
   });
+
+  // Calculate lock status based on prerequisite topic completion (80% threshold)
+  const topicById = new Map(topics.map((t) => [t.id, t]));
+  for (const topicUI of topics) {
+    const topicDef = TOPICS.find((t) => t.id === topicUI.id);
+    if (topicDef && topicDef.unlockThresholdPercent > 0) {
+      // Find prerequisite topic (the one with orderIndex - 1)
+      const prereqDef = TOPICS.find((t) => t.orderIndex === topicDef.orderIndex - 1);
+      if (prereqDef) {
+        const prereqUI = topicById.get(prereqDef.id);
+        if (prereqUI) {
+          const prereqStats = prereqUI.maps.reduce(
+            (acc, map) => {
+              acc.total += map.exercises.length;
+              acc.completed += map.exercises.filter((e) => e.isCompleted).length;
+              return acc;
+            },
+            { total: 0, completed: 0 },
+          );
+          const percent = prereqStats.total > 0 ? Math.round((prereqStats.completed / prereqStats.total) * 100) : 0;
+          topicUI.isLocked = percent < topicDef.unlockThresholdPercent;
+          topicUI.completionPercent = percent;
+          topicUI.prerequisiteName = prereqDef.name;
+        }
+      }
+    }
+  }
 
   return <LearningMapClient topics={topics} />;
 }

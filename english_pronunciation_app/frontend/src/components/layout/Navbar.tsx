@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import NavbarClient, { type NavbarLink } from "./NavbarClient";
 
 const navLinks: Array<NavbarLink & { authOnly: boolean }> = [
@@ -17,10 +18,20 @@ export default async function Navbar() {
   const username = session?.user?.name ?? "Người học";
   const avatarUrl = session?.user?.image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
 
+  // Fetch gems for logged-in users
+  let gems = 0;
+  if (session?.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { gems: true },
+    });
+    gems = dbUser?.gems ?? 0;
+  }
+
   return (
     <NavbarClient
       links={navLinks.filter((link) => !link.authOnly || isAuthenticated)}
-      user={isAuthenticated ? { username, avatarUrl } : null}
+      user={isAuthenticated ? { username, avatarUrl, gems } : null}
       isAdmin={isAdmin}
     />
   );

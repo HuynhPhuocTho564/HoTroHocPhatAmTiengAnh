@@ -1,18 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import BadgeManagement, { type AdminBadge } from "@/components/admin/BadgeManagement";
 import AudioManagement, { type AdminAudioFile } from "@/components/admin/AudioManagement";
 import ExerciseManagement, { type AdminExercise } from "@/components/admin/ExerciseManagement";
+import MinimalPairManagement, { type AdminMinimalPair } from "@/components/admin/MinimalPairManagement";
+import PhonemeManagement, { type AdminPhoneme } from "@/components/admin/PhonemeManagement";
+import QuestionBankManagement, { type AdminQuestionBankItem } from "@/components/admin/QuestionBankManagement";
 import ReportsAnalytics, { type AdminReportsData } from "@/components/admin/ReportsAnalytics";
+import SentenceItemManagement, { type AdminSentenceItem } from "@/components/admin/SentenceItemManagement";
+import SoundGroupManagement, { type AdminSoundGroup } from "@/components/admin/SoundGroupManagement";
 import TopicLevelMapManagement, {
   type AdminLevelItem,
   type AdminMapItem,
   type AdminTopicItem,
 } from "@/components/admin/TopicLevelMapManagement";
 import UserManagement, { type AdminUser } from "@/components/admin/UserManagement";
+import WordItemManagement, { type AdminWordItem } from "@/components/admin/WordItemManagement";
 import Card from "@/components/ui/Card";
 
-type AdminTab = "overview" | "users" | "exercises" | "topics" | "audio" | "badges" | "reports";
+type AdminTab = "overview" | "users" | "exercises" | "topics" | "phonemes" | "words" | "soundgroups" | "questions" | "minimalpairs" | "sentences" | "audio" | "badges" | "reports";
 
 export type AdminDashboardData = {
   stats: {
@@ -37,6 +44,13 @@ export type AdminDashboardData = {
     questionTypes: AdminExerciseOption[];
   };
   audioFiles: AdminAudioFile[];
+  phonemes: AdminPhoneme[];
+  wordItems: AdminWordItem[];
+  soundGroups: AdminSoundGroup[];
+  questionBankItems: AdminQuestionBankItem[];
+  minimalPairs: AdminMinimalPair[];
+  sentenceItems: AdminSentenceItem[];
+  badges: AdminBadge[];
   reports: AdminReportsData;
 };
 
@@ -50,6 +64,12 @@ const tabs: Array<{ id: AdminTab; name: string }> = [
   { id: "users", name: "Người dùng" },
   { id: "exercises", name: "Bài tập" },
   { id: "topics", name: "Chủ đề" },
+  { id: "phonemes", name: "Phoneme" },
+  { id: "words", name: "Từ vựng" },
+  { id: "soundgroups", name: "Nhóm âm" },
+  { id: "questions", name: "Ngân hàng câu" },
+  { id: "minimalpairs", name: "Minimal Pair" },
+  { id: "sentences", name: "Câu" },
   { id: "audio", name: "Âm thanh" },
   { id: "badges", name: "Gamification" },
   { id: "reports", name: "Báo cáo" },
@@ -181,13 +201,49 @@ export default function AdminDashboardClient({ data }: { data: AdminDashboardDat
             <TopicLevelMapManagement topics={data.topics} levels={data.levels} maps={data.maps} />
           )}
 
+          {activeTab === "phonemes" && (
+            <PhonemeManagement phonemes={data.phonemes} />
+          )}
+
+          {activeTab === "words" && (
+            <WordItemManagement
+              items={data.wordItems}
+              phonemes={data.phonemes.map((p) => ({ id: p.id, symbol: p.symbol }))}
+            />
+          )}
+
+          {activeTab === "soundgroups" && (
+            <SoundGroupManagement
+              items={data.soundGroups}
+              topics={data.exerciseOptions.topics}
+            />
+          )}
+
+          {activeTab === "questions" && (
+            <QuestionBankManagement
+              items={data.questionBankItems}
+              questionTypes={data.exerciseOptions.questionTypes}
+              soundGroups={data.soundGroups.map((s) => ({ id: s.id, name: s.name }))}
+            />
+          )}
+
+          {activeTab === "minimalpairs" && (
+            <MinimalPairManagement
+              items={data.minimalPairs}
+              soundGroups={data.soundGroups.map((s) => ({ id: s.id, name: s.name }))}
+              wordItems={data.wordItems.map((w) => ({ id: w.id, word: w.word }))}
+            />
+          )}
+
+          {activeTab === "sentences" && (
+            <SentenceItemManagement
+              items={data.sentenceItems}
+              soundGroups={data.soundGroups.map((s) => ({ id: s.id, name: s.name }))}
+            />
+          )}
+
           {activeTab === "badges" && (
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-bold text-neutral-900">Cấu hình gamification</h2>
-                <p className="mt-2 text-neutral-600">Quản lý badge/rule sẽ thực hiện sau khi chốt API admin.</p>
-              </div>
-            </Card>
+            <BadgeManagement badges={data.badges} />
           )}
         </section>
       </main>

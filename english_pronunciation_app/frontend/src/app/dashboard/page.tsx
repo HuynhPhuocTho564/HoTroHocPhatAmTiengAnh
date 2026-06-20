@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import DailyCheckIn from "@/components/gamification/DailyCheckIn";
+import DailyQuestsWidget from "@/components/gamification/DailyQuestsWidget";
+import WeeklyChallengeCard from "@/components/gamification/WeeklyChallengeCard";
+import SpinWheel from "@/components/gamification/SpinWheel";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import { auth } from "@/lib/auth";
@@ -261,6 +264,16 @@ export default async function DashboardPage() {
               totalCheckIns={user.totalCheckIns}
               lastCheckIn={user.lastCheckInDate?.toISOString() ?? null}
             />
+          </div>
+
+          <DailyQuestsWidget />
+
+          <div className="mb-6">
+            <WeeklyChallengeCard />
+          </div>
+
+          <div className="mb-6">
+            <SpinWheel />
           </div>
 
           <Card>

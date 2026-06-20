@@ -160,3 +160,41 @@ test("Linking + Assimilation (g03/g04): mỗi nhóm 8 câu, có ipa bắt đầu
     }
   }
 });
+
+// ===== CD3 (Topic 3 - Minimal Pairs Khó): g02 + g04 =====
+
+const CD3_GROUPS = [
+  "map-t3-g02-initial-confuse",
+  "map-t3-g04-dental-sibilant",
+];
+
+test("2 nhóm CD3 có trong LESSON_CONTENT_BY_SOUND_GROUP", () => {
+  for (const id of CD3_GROUPS) {
+    assert.ok(LESSON_CONTENT_BY_SOUND_GROUP[id as keyof typeof LESSON_CONTENT_BY_SOUND_GROUP], `Thiếu nhóm ${id}`);
+  }
+});
+
+test("mỗi nhóm CD3 có words >= 8, minimalPairs >= 4, sentences >= 3", () => {
+  for (const id of CD3_GROUPS) {
+    const content = getContentBySoundGroup(id);
+    assert.ok(content, `getContentBySoundGroup(${id}) trả undefined`);
+    assert.ok(content!.words.length >= 8, `${id}: words >= 8 (hiện ${content!.words.length})`);
+    assert.ok(content!.minimalPairs.length >= 4, `${id}: pairs >= 4 (hiện ${content!.minimalPairs.length})`);
+    assert.ok(content!.sentences.length >= 3, `${id}: sentences >= 3 (hiện ${content!.sentences.length})`);
+  }
+});
+
+test("mỗi word CD3 có soundGroupId khớp + ipa bắt đầu / + targetPhonemes", () => {
+  for (const id of CD3_GROUPS) {
+    const content = getContentBySoundGroup(id);
+    for (const w of content!.words) {
+      assert.equal(w.soundGroupId, id, `word "${w.word}" soundGroupId sai: ${w.soundGroupId}`);
+      assert.ok(w.ipa.startsWith("/"), `word "${w.word}" ipa phải bắt đầu bằng /`);
+      assert.ok(w.targetPhonemes.length > 0, `word "${w.word}" thiếu targetPhonemes`);
+    }
+  }
+});
+
+test("tổng số nhóm có content >= 28 (10 CD1 + 12 CD2 + 2 CD3 + 4 CD4)", () => {
+  assert.ok(Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length >= 28, `Ít nhất 28 nhóm content (hiện ${Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length})`);
+});

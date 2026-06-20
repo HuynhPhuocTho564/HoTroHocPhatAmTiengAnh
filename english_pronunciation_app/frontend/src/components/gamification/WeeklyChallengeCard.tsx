@@ -1,0 +1,183 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+
+type ChallengeData = {
+  challenge: {
+    id: string;
+    title: string;
+    description: string;
+    targetMetric: string;
+    targetValue: number;
+    rewardGems: number;
+    endsAt: string;
+  };
+  participation: {
+    progress: number;
+    completed: boolean;
+    claimedAt: string | null;
+  };
+  topParticipants: {
+    username: string;
+    avatarUrl: string | null;
+    progress: number;
+  }[];
+};
+
+/**
+ * WeeklyChallengeCard — Displays the current week's challenge
+ * with user progress, leaderboard, and countdown timer.
+ */
+export default function WeeklyChallengeCard() {
+  const [data, setData] = useState<ChallengeData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+
+  const fetchChallenge = useCallback(async () => {
+    try {
+      const res = await fetch("/api/weekly-challenges");
+      const payload = await res.json();
+      if (payload.success) {
+        setData(payload.data);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChallenge();
+  }, [fetchChallenge]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!data?.challenge.endsAt) return;
+
+    const updateTimer = () => {
+      const end = new Date(data.challenge.endsAt).getTime();
+      const now = Date.now();
+      const diff = end - now;
+      if (diff <= 0) {
+        setTimeLeft("Đã kết thúc");
+        return;
+      }
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      setTimeLeft(`${days} ngày ${hours} giờ`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60_000);
+    return () => clearInterval(interval);
+  }, [data?.challenge.endsAt]);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-neutral-200 bg-white p-5 animate-pulse" aria-busy="true">
+        <div className="mb-3 h-4 w-32 rounded bg-neutral-200" />
+        <div className="mb-2 h-6 w-48 rounded bg-neutral-200" />
+        <div className="h-3 w-40 rounded bg-neutral-100" />
+      </div>
+    );
+  }
+
+  if (error || !data) return null;
+
+  const { challenge, participation, topParticipants } = data;
+  const progressPercent = Math.min(100, Math.round((participation.progress / challenge.targetValue) * 100));
+  const metricLabel: Record<string, string> = {
+    streak: "🔥 Chuỗi ngày",
+    exercises: "📚 Bài tập",
+    perfect_scores: "🎯 Điểm 90%+",
+    xp_weekly: "⭐ XP",
+  };
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-sm">
+      {/* Header */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-widest text-amber-700">
+          🏆 Thử thách tuần
+        </span>
+        <span className="text-xs font-semibold text-amber-600" aria-label={`Còn lại ${timeLeft}`}>
+          ⏱ {timeLeft}
+        </span>
+      </div>
+
+      {/* Title + Description */}
+      <h3 className="mb-1 text-lg font-bold text-neutral-900">{challenge.title}</h3>
+      <p className="mb-4 text-sm text-neutral-600">{challenge.description}</p>
+
+      {/* Progress bar */}
+      <div className="mb-3">
+        <div className="mb-1 flex justify-between text-xs font-semibold">
+          <span className="text-neutral-600">
+            {metricLabel[challenge.targetMetric] ?? challenge.targetMetric}
+          </span>
+          <span className="text-amber-700">
+            {participation.progress}/{challenge.targetValue}
+          </span>
+        </div>
+        <div
+          className="h-2.5 w-full rounded-full bg-amber-100"
+          role="progressbar"
+          aria-label="Tiến độ thử thách tuần"
+          aria-valuemin={0}
+          aria-valuemax={challenge.targetValue}
+          aria-valuenow={participation.progress}
+        >
+          <div
+            className="h-2.5 rounded-full bg-amber-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Reward */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+          🎁 {challenge.rewardGems} 💎
+        </span>
+        {participation.completed && !participation.claimedAt && (
+          <span className="rounded-lg bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700 animate-bounce">
+            ✅ Hoàn thành!
+          </span>
+        )}
+        {participation.claimedAt && (
+          <span className="rounded-lg bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-500">
+            Đã nhận thưởng
+          </span>
+        )}
+      </div>
+
+      {/* Top participants */}
+      {topParticipants.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+            Bảng xếp hạng
+          </p>
+          <ul className="space-y-1.5">
+            {topParticipants.map((p, i) => (
+              <li key={p.username} className="flex items-center gap-2 text-sm">
+                <span className="w-5 text-center font-bold text-amber-600">
+                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                </span>
+                <span className="flex-1 truncate font-medium text-neutral-800">
+                  {p.username}
+                </span>
+                <span className="text-xs font-semibold text-neutral-500">
+                  {p.progress}/{challenge.targetValue}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

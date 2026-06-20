@@ -1,4 +1,11 @@
 import AdminDashboardClient, { type AdminDashboardData } from "@/components/admin/AdminDashboardClient";
+import type { AdminPhoneme } from "@/components/admin/PhonemeManagement";
+import type { AdminWordItem } from "@/components/admin/WordItemManagement";
+import type { AdminSoundGroup } from "@/components/admin/SoundGroupManagement";
+import type { AdminQuestionBankItem } from "@/components/admin/QuestionBankManagement";
+import type { AdminMinimalPair } from "@/components/admin/MinimalPairManagement";
+import type { AdminSentenceItem } from "@/components/admin/SentenceItemManagement";
+import type { AdminBadge } from "@/components/admin/BadgeManagement";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +29,13 @@ export default async function AdminDashboardPage() {
     levels,
     maps,
     questionTypes,
+    phonemes,
+    wordItems,
+    soundGroupsRaw,
+    questionBankItems,
+    minimalPairs,
+    sentenceItems,
+    badgesRaw,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { status: "ACTIVE" } }),
@@ -136,6 +150,49 @@ export default async function AdminDashboardPage() {
         name: true,
       },
     }),
+    prisma.phoneme.findMany({
+      orderBy: [{ category: "asc" }, { symbol: "asc" }],
+    }),
+    prisma.wordItem.findMany({
+      orderBy: [{ word: "asc" }],
+      include: {
+        phoneme: { select: { id: true, symbol: true } },
+      },
+    }),
+    prisma.soundGroup.findMany({
+      orderBy: [{ topic: { name: "asc" } }, { name: "asc" }],
+      include: {
+        topic: { select: { id: true, name: true } },
+        _count: { select: { phonemes: true, minimalPairs: true, sentenceItems: true } },
+      },
+    }),
+    prisma.questionBankItem.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        questionType: { select: { id: true, name: true } },
+        soundGroup: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.minimalPair.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        soundGroup: { select: { id: true, name: true } },
+        wordA: { select: { id: true, word: true, ipa: true } },
+        wordB: { select: { id: true, word: true, ipa: true } },
+      },
+    }),
+    prisma.sentenceItem.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        soundGroup: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.badge.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: { select: { userBadges: true } },
+      },
+    }),
   ]);
 
   const completedAttemptsLast7Days = recentAttempts.length;
@@ -235,6 +292,71 @@ export default async function AdminDashboardPage() {
       duration: audio.duration,
       playLimit: audio.playLimit,
       usedIn: audio._count.exercises,
+    })),
+    phonemes: phonemes.map((p) => ({
+      id: p.id,
+      symbol: p.symbol,
+      name: p.name,
+      category: p.category,
+      description: p.description,
+      mouthHint: p.mouthHint,
+      commonMistake: p.commonMistake,
+      status: p.status,
+    })),
+    wordItems: wordItems.map((w): AdminWordItem => ({
+      id: w.id,
+      word: w.word,
+      ipa: w.ipa,
+      difficulty: w.difficulty,
+      status: w.status,
+      meaningVi: w.meaningVi,
+      reviewNote: w.reviewNote,
+      phonemeId: w.phonemeId,
+      phoneme: w.phoneme ? { id: w.phoneme.id, symbol: w.phoneme.symbol } : undefined,
+    })),
+    soundGroups: soundGroupsRaw.map((s): AdminSoundGroup => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      status: s.status,
+      topic: s.topic ? { id: s.topic.id, name: s.topic.name } : null,
+      _count: s._count ? { exercises: 0, phonemes: s._count.phonemes } : undefined,
+    })),
+    questionBankItems: questionBankItems.map((q): AdminQuestionBankItem => ({
+      id: q.id,
+      answer: q.answer,
+      prompt: q.prompt,
+      status: q.status,
+      questionTypeId: q.questionTypeId,
+      soundGroupId: q.soundGroupId,
+      questionType: q.questionType ? { id: q.questionType.id, name: q.questionType.name } : undefined,
+      soundGroup: q.soundGroup ? { id: q.soundGroup.id, name: q.soundGroup.name } : null,
+    })),
+    minimalPairs: minimalPairs.map((m): AdminMinimalPair => ({
+      id: m.id,
+      note: m.note,
+      difficulty: m.difficulty,
+      status: m.status,
+      soundGroup: m.soundGroup ? { id: m.soundGroup.id, name: m.soundGroup.name } : undefined,
+      wordA: m.wordA ? { id: m.wordA.id, word: m.wordA.word, ipa: m.wordA.ipa } : undefined,
+      wordB: m.wordB ? { id: m.wordB.id, word: m.wordB.word, ipa: m.wordB.ipa } : undefined,
+    })),
+    sentenceItems: sentenceItems.map((s): AdminSentenceItem => ({
+      id: s.id,
+      text: s.text,
+      difficulty: s.difficulty,
+      status: s.status,
+      reviewNote: s.reviewNote,
+      soundGroup: s.soundGroup ? { id: s.soundGroup.id, name: s.soundGroup.name } : undefined,
+    })),
+    badges: badgesRaw.map((b): AdminBadge => ({
+      id: b.id,
+      name: b.name,
+      description: b.description,
+      image: b.image,
+      condition: b.condition,
+      type: b.type,
+      userCount: b._count.userBadges,
     })),
     reports: {
       newUsersLast7Days,

@@ -1,4 +1,4 @@
-export type LeaderboardPeriodType = "tuan" | "thang";
+export type LeaderboardPeriodType = "tuan" | "thang" | "all";
 
 function pad2(value: number) {
   return String(value).padStart(2, "0");

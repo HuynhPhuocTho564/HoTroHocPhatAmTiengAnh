@@ -1,0 +1,5 @@
+- The system uses a Next.js frontend that serves as both the UI and the API layer (via App Router), interacting directly with a PostgreSQL database via Prisma ORM.
+- A separate Python FastAPI backend exists but is currently minimal (health check only), indicating a planned future split for heavy computation (e.g., advanced speech scoring) or AI services.
+- Authentication is handled by NextAuth.js with JWT sessions, supporting both credentials and Google OAuth, with role-based access control (User/Admin) enforced in API routes.
+- Data integrity and seeding are managed via Prisma scripts, with a strict audit process ensuring alignment between the schema, seed data, and pedagogical plans (IPA topics, sound groups).
+- Gamification logic (XP, streaks, badges, leaderboards) is implemented server-side within Next.js API routes to prevent client-side manipulation, updating user profiles and daily activity records transactionally.

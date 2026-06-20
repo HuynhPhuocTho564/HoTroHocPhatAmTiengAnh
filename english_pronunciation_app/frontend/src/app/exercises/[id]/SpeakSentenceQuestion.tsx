@@ -9,6 +9,8 @@ import SpeakFeedbackSheet from "./SpeakFeedbackSheet";
 type SpeakSentenceQuestionProps = {
   question: ExerciseQuestion;
   onNext: (correct: boolean, transcript: string) => void;
+  unlockedSlowAudio?: boolean;
+  unlockedIpaReveal?: boolean;
 };
 
 type SpeechRecognitionLike = {
@@ -37,6 +39,19 @@ function playSentence(text: string) {
   window.speechSynthesis.speak(utter);
 }
 
+/** Play sentence at half speed (x0.5) - unlocked from shop */
+function playSentenceSlow(text: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "en-US";
+  utter.rate = 0.5;
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find((v) => v.lang === "en-US") || voices.find((v) => v.lang.startsWith("en"));
+  if (enVoice) utter.voice = enVoice;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
 function hintText(level: RecorderLevel): { text: string; color: string } {
   switch (level) {
     case "silence": return { text: "🗣️ Nói to hơn", color: "text-neutral-500" };
@@ -45,7 +60,7 @@ function hintText(level: RecorderLevel): { text: string; color: string } {
   }
 }
 
-export default function SpeakSentenceQuestion({ question, onNext }: SpeakSentenceQuestionProps) {
+export default function SpeakSentenceQuestion({ question, onNext, unlockedSlowAudio = false, unlockedIpaReveal = false }: SpeakSentenceQuestionProps) {
   const contentData = useMemo(() => parseWordPrompt(question.content), [question.content]);
   const [status, setStatus] = useState<"idle" | "recording" | "processing" | "correct" | "incorrect" | "error">("idle");
   const [transcript, setTranscript] = useState("");
@@ -112,6 +127,13 @@ export default function SpeakSentenceQuestion({ question, onNext }: SpeakSentenc
           <span className="inline-block rounded-full bg-accent-100 px-4 py-1.5 text-sm font-bold text-accent-700">🎯 Thực chiến</span>
         </div>
 
+        {/* IPA reveal - only shown when user unlocked IPA reveal from shop */}
+        {unlockedIpaReveal && contentData.ipa && (
+          <div className="mb-4 text-center">
+            <p className="font-ipa text-xl font-bold text-accent-500">{contentData.ipa}</p>
+          </div>
+        )}
+
         {/* Câu ẩn (toggle) */}
         <div className="mb-6 text-center">
           {contentData.ipa && (
@@ -129,11 +151,18 @@ export default function SpeakSentenceQuestion({ question, onNext }: SpeakSentenc
         </div>
 
         {/* Audio speechSynthesis */}
-        <div className="mb-6 flex justify-center">
+        <div className="mb-6 flex justify-center gap-3">
           <button type="button" onClick={() => playSentence(question.answer)} aria-label="Nghe mẫu câu"
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-accent-200 bg-accent-50 px-4 py-2 text-sm font-bold text-accent-700 transition-colors hover:bg-accent-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500">
             🎧 Nghe mẫu câu
           </button>
+          {/* Slow audio x0.5 - only when unlocked from shop */}
+          {unlockedSlowAudio && (
+            <button type="button" onClick={() => playSentenceSlow(question.answer)} aria-label="Nghe chậm x0.5"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-warning-300 bg-warning-50 px-4 py-2 text-sm font-bold text-warning-700 transition-colors hover:bg-warning-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-warning-400">
+              🐢 Nghe chậm x0.5
+            </button>
+          )}
         </div>
 
         {/* Waveform container luôn render (để hook useEffect khởi tạo wavesurfer lúc mount).

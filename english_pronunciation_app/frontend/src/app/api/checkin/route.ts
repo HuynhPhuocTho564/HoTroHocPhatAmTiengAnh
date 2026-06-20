@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import {
   CHECKIN_REWARD,
   calculateLevelFromXp,
+  calculateNextStreak,
   checkAndAwardBadges,
   getLeaderboardTargets,
 } from "@/lib/gamification";
@@ -29,25 +30,6 @@ async function getSessionUserId() {
   return session?.user?.id;
 }
 
-function calculateNextStreak(lastCheckInDate: Date | null, currentStreak: number, today: Date) {
-  if (!lastCheckInDate) {
-    return { alreadyCheckedIn: false, streak: 1 };
-  }
-
-  const lastCheckInDay = startOfLocalDay(lastCheckInDate);
-  const diffDays = Math.floor((today.getTime() - lastCheckInDay.getTime()) / 86400000);
-
-  if (diffDays === 0) {
-    return { alreadyCheckedIn: true, streak: currentStreak };
-  }
-
-  if (diffDays === 1) {
-    return { alreadyCheckedIn: false, streak: currentStreak + 1 };
-  }
-
-  return { alreadyCheckedIn: false, streak: 1 };
-}
-
 export async function GET(request: NextRequest) {
   try {
     const userId = await getSessionUserId();
@@ -63,6 +45,7 @@ export async function GET(request: NextRequest) {
         longestStreak: true,
         totalCheckIns: true,
         lastCheckInDate: true,
+        streakFreezes: true,
         xp: true,
         level: true,
       },
@@ -73,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     const today = startOfLocalDay(new Date());
-    const streakStatus = calculateNextStreak(user.lastCheckInDate, user.streakCount, today);
+    const streakStatus = calculateNextStreak(user.lastCheckInDate, user.streakCount, today, user.streakFreezes);
 
     return success({
       currentStreak: user.streakCount,
@@ -115,6 +98,7 @@ export async function POST(request: NextRequest) {
         longestStreak: true,
         totalCheckIns: true,
         lastCheckInDate: true,
+        streakFreezes: true,
       },
     });
 
@@ -122,7 +106,7 @@ export async function POST(request: NextRequest) {
       return failure("USER_NOT_FOUND", "Không tìm thấy user", 404);
     }
 
-    const streakStatus = calculateNextStreak(user.lastCheckInDate, user.streakCount, today);
+    const streakStatus = calculateNextStreak(user.lastCheckInDate, user.streakCount, today, user.streakFreezes);
 
     if (streakStatus.alreadyCheckedIn) {
       return failure("ALREADY_CHECKED_IN", "Hôm nay đã điểm danh", 409, {
@@ -144,6 +128,7 @@ export async function POST(request: NextRequest) {
           streakCount: streakStatus.streak,
           longestStreak: Math.max(streakStatus.streak, user.longestStreak),
           totalCheckIns: { increment: 1 },
+          ...(streakStatus.usedFreeze ? { streakFreezes: { decrement: 1 } } : {}),
         },
         select: {
           xp: true,

@@ -1,6 +1,7 @@
 import type { LeaderboardPeriodType } from "@/lib/period";
-import { getLeaderboardPeriod } from "@/lib/period";
+import { getLeaderboardPeriod, startOfLocalDay } from "@/lib/period";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import type { ExerciseRating } from "@/lib/scoring";
 
 export type RewardInput = {
   exerciseScore: number;
@@ -527,4 +528,118 @@ export async function checkAndAwardBadges(
   }
 
   return awarded;
+}
+
+// === SP7: Gem + Shop + Streak Freeze ===
+
+export function computeGemReward(rating: ExerciseRating): number {
+  return rating === "EXCELLENT" ? 5 : 0;
+}
+
+export function validateShopPurchase(
+  userGems: number,
+  itemCost: number,
+): { ok: true } | { ok: false; reason: "NOT_ENOUGH_GEMS" } {
+  if (userGems < itemCost) return { ok: false, reason: "NOT_ENOUGH_GEMS" };
+  return { ok: true };
+}
+
+export const SHOP_ITEMS = [
+  { id: "ipa_reveal", name: "Kính Lúp IPA", cost: 50, desc: "Xem IPA câu khó trong Thực chiến" },
+  { id: "slow_audio", name: "Loa Ma Thuật", cost: 20, desc: "Nghe giọng bản xứ chậm x0.5" },
+  { id: "streak_freeze", name: "Bùa Đóng Băng", cost: 10, desc: "Giữ chuỗi ngày khi lỡ 1 ngày" },
+] as const;
+
+export function calculateNextStreak(
+  lastCheckInDate: Date | null,
+  currentStreak: number,
+  today: Date,
+  streakFreezes: number = 0,
+): { alreadyCheckedIn: boolean; streak: number; usedFreeze: boolean } {
+  if (!lastCheckInDate) {
+    return { alreadyCheckedIn: false, streak: 1, usedFreeze: false };
+  }
+  const lastDay = startOfLocalDay(lastCheckInDate);
+  const diffDays = Math.floor((today.getTime() - lastDay.getTime()) / 86400000);
+  if (diffDays === 0) {
+    return { alreadyCheckedIn: true, streak: currentStreak, usedFreeze: false };
+  }
+  if (diffDays === 1) {
+    return { alreadyCheckedIn: false, streak: currentStreak + 1, usedFreeze: false };
+  }
+  if (streakFreezes > 0) {
+    return { alreadyCheckedIn: false, streak: currentStreak, usedFreeze: true };
+  }
+  return { alreadyCheckedIn: false, streak: 1, usedFreeze: false };
+}
+
+// === SP7: Daily Quests ===
+
+/** Quest type definitions - pool of daily quests available for rotation */
+export const QUEST_TYPES = [
+  { type: "PRACTICE_3", target: 3, desc: "Luyện 3 bài hôm nay", rewardXp: 50, rewardGems: 10 },
+  { type: "CD2_3", target: 3, desc: "Hoàn thành 3 bài CĐ2 Phụ âm", rewardXp: 50, rewardGems: 10 },
+  { type: "CD4_LINKING_3", target: 3, desc: "Hoàn thành 3 bài CĐ4 nối âm (g03)", rewardXp: 50, rewardGems: 10 },
+] as const;
+
+export type QuestType = (typeof QUEST_TYPES)[number]["type"];
+
+/** Randomly pick 3 quests from the pool for a daily rotation */
+export function pickDailyQuests(): {
+  type: string;
+  target: number;
+  desc: string;
+  rewardXp: number;
+  rewardGems: number;
+}[] {
+  const shuffled = [...QUEST_TYPES].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3).map((q) => ({
+    type: q.type,
+    target: q.target,
+    desc: q.desc,
+    rewardXp: q.rewardXp,
+    rewardGems: q.rewardGems,
+  }));
+}
+
+/**
+ * Check if an exercise submit should increment a quest's progress.
+ * Returns true if the quest type conditions are met.
+ */
+export function shouldIncrementQuest(
+  questType: string,
+  payload: { exerciseCompleted: boolean; topicId: string; soundGroupId: string },
+): boolean {
+  if (questType === "PRACTICE_3") return payload.exerciseCompleted;
+  if (questType === "CD2_3") return payload.exerciseCompleted && payload.topicId === "topic-2-consonants";
+  if (questType === "CD4_LINKING_3") return payload.exerciseCompleted && payload.soundGroupId === "map-t4-g03-linking";
+  return false;
+}
+
+// === SP4: Scoring multiplier + Retake limit ===
+
+/** Maximum retakes allowed per exercise per day before XP is capped */
+export const MAX_RETAKE_PER_DAY = 5;
+
+/**
+ * Compute XP multiplier based on exercise question types.
+ * Speaking exercises earn full XP; listening exercises earn 80%.
+ */
+export function computeXpMultiplier(questionTypeIds: string[]): number {
+  if (questionTypeIds.length === 0) return 1;
+  const speakingCount = questionTypeIds.filter(
+    (id) => id.includes("voice") || id.includes("minimal-pairs"),
+  ).length;
+  const ratio = speakingCount / questionTypeIds.length;
+  // If majority speaking: 1.0, if majority listening: 0.8, else 0.9
+  if (ratio >= 0.5) return 1.0;
+  return 0.8;
+}
+
+/**
+ * Check if user has exceeded the daily retake limit for a specific exercise.
+ * Returns true if the user should receive reduced XP (retake limit hit).
+ */
+export function isRetakeLimitExceeded(attemptCountToday: number): boolean {
+  return attemptCountToday >= MAX_RETAKE_PER_DAY;
 }

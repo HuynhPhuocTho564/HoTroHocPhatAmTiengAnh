@@ -4,6 +4,7 @@ import "./globals.css";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import RewardEffectsLayer from "@/components/gamification/RewardEffectsLayer";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-inter" });
 const notoSans = Noto_Sans({
@@ -38,11 +39,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${notoSans.variable} flex min-h-screen flex-col font-sans antialiased`}>
         <ThemeProvider>
-          <Navbar />
-          <div id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
-            {children}
-          </div>
-          <Footer />
+          <RewardEffectsLayer>
+            <Navbar />
+            <div id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+              {children}
+            </div>
+            <Footer />
+          </RewardEffectsLayer>
         </ThemeProvider>
       </body>
     </html>

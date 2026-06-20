@@ -1,0 +1,5 @@
+- **Frontend:** Next.js 16, React 18, TypeScript, Tailwind CSS v4.
+- **Backend:** FastAPI, Uvicorn, Pydantic.
+- **Database:** PostgreSQL with Prisma ORM.
+- **Audio/Speech:** Web Speech API (browser-native STT), WaveSurfer.js for waveform visualization, Free Dictionary API for seed audio.
+- **Auth:** NextAuth v5 (beta) with bcryptjs for password hashing.

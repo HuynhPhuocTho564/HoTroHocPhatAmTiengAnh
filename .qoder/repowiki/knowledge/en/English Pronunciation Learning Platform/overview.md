@@ -1,0 +1,1 @@
+A gamified web application for Vietnamese learners to practice English pronunciation through IPA-based exercises, speech recognition, and progress tracking.

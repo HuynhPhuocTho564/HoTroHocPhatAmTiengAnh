@@ -31,6 +31,9 @@ export type TopicUI = {
   name: string;
   description: string | null;
   maps: LearningMapUI[];
+  isLocked?: boolean;
+  completionPercent?: number;
+  prerequisiteName?: string;
 };
 
 type Tone = "primary" | "success" | "warning" | "accent";
@@ -215,17 +218,37 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
               <section className="space-y-4" aria-label="Danh sách chủ đề">
                 {topics.map((topic, index) => {
                   const stats = getTopicStats(topic);
-                  const disabled = stats.total === 0;
+                  const disabled = stats.total === 0 || topic.isLocked;
 
                   return (
                     <button
                       key={topic.id}
                       type="button"
-                      onClick={() => openTopic(topic)}
+                      onClick={() => !topic.isLocked && openTopic(topic)}
                       disabled={disabled}
-                      className="group w-full rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:border-neutral-200 disabled:hover:shadow-sm"
-                      aria-label={`Mở chủ đề ${topic.name}`}
+                      className={`group w-full rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:border-neutral-200 disabled:hover:shadow-sm ${topic.isLocked ? "relative overflow-hidden" : ""}`}
+                      aria-label={topic.isLocked ? `Chủ đề ${topic.name} bị khóa` : `Mở chủ đề ${topic.name}`}
                     >
+                      {topic.isLocked && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-neutral-900/60 backdrop-blur-sm">
+                          <div className="text-4xl">🔒</div>
+                          <p className="mt-2 text-lg font-bold text-white">Chủ đề bị khóa</p>
+                          <p className="mt-1 text-sm text-neutral-200">
+                            Hoàn thành ≥80% &quot;{topic.prerequisiteName}&quot; để mở khóa
+                          </p>
+                          {topic.completionPercent !== undefined && (
+                            <div className="mt-3 w-48">
+                              <ProgressBar
+                                value={topic.completionPercent}
+                                max={100}
+                                label={`${topic.completionPercent}% hoàn thành`}
+                                color="warning"
+                                showPercentage
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="flex flex-col gap-5 md:flex-row md:items-start">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-xl font-bold text-white">
                           {index + 1}
@@ -252,7 +275,11 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
                             />
                           </div>
                           <div className="mt-4 text-sm font-bold text-primary-700">
-                            {disabled ? "Nội dung đang được chuẩn bị" : "Xem nhóm âm"}
+                            {topic.isLocked
+                              ? "Cần mở khóa"
+                              : disabled
+                                ? "Nội dung đang được chuẩn bị"
+                                : "Xem nhóm âm"}
                           </div>
                         </div>
                       </div>

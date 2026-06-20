@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import ExerciseEngineClient from "./ExerciseEngineClient";
 
@@ -47,23 +48,38 @@ function getQuestionOptions(question: {
 export default async function ExercisePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const exercise = await prisma.exercise.findUnique({
-    where: {
-      id,
-      status: "ACTIVE",
-    },
-    include: {
-      questions: {
-        where: {
-          status: "ACTIVE",
-        },
-        include: {
-          options: true,
-          type: true,
+  const [exercise, userUnlocks] = await Promise.all([
+    prisma.exercise.findUnique({
+      where: {
+        id,
+        status: "ACTIVE",
+      },
+      include: {
+        questions: {
+          where: {
+            status: "ACTIVE",
+          },
+          include: {
+            options: true,
+            type: true,
+          },
         },
       },
-    },
-  });
+    }),
+    // Fetch unlock flags + level for logged-in users (shop items + reward events)
+    auth().then(async (session) => {
+      if (!session?.user?.id) return { unlockedSlowAudio: false, unlockedIpaReveal: false, userLevel: 0 };
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { unlockedSlowAudio: true, unlockedIpaReveal: true, level: true },
+      });
+      return {
+        unlockedSlowAudio: user?.unlockedSlowAudio ?? false,
+        unlockedIpaReveal: user?.unlockedIpaReveal ?? false,
+        userLevel: user?.level ?? 0,
+      };
+    }),
+  ]);
 
   if (!exercise) {
     notFound();
@@ -87,5 +103,5 @@ export default async function ExercisePage({ params }: { params: Promise<{ id: s
     })),
   };
 
-  return <ExerciseEngineClient exercise={exerciseData} />;
+  return <ExerciseEngineClient exercise={exerciseData} unlocks={userUnlocks} />;
 }

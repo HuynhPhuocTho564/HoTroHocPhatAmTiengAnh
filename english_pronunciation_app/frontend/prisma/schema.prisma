@@ -53,6 +53,9 @@ model User {
   userBadges       UserBadge[]
   leaderboards     Leaderboard[]
   dailyQuests      DailyQuest[]
+  userMilestones   UserMilestone[]
+  challengeParticipants WeeklyChallengeParticipant[]
+  spinWheelLogs    SpinWheelLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -497,4 +500,80 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
+}
+
+// ---------------------------------------------------------
+// PHẦN THƯỞNG CỘT MỐC (ENGAGEMENT PHASE 2)
+// ---------------------------------------------------------
+
+model MilestoneReward {
+  id          String   @id @default(uuid())
+  level       Int      @unique          // Level cần đạt
+  gemsReward  Int      @default(0)
+  badgeName   String?                   // Tên badge thưởng (optional)
+  unlockType  String?                   // "avatar_frame" | "theme" | "feature" (optional)
+  unlockValue String?                   // Giá trị mở khóa (optional)
+  title       String                    // "Khởi Đầu", "Kiên Trì"
+  description String
+  createdAt   DateTime @default(now())
+
+  userMilestones UserMilestone[]
+}
+
+model UserMilestone {
+  id          String   @id @default(uuid())
+  userId      String
+  milestoneId String
+  claimedAt   DateTime @default(now())
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestone MilestoneReward @relation(fields: [milestoneId], references: [id])
+
+  @@unique([userId, milestoneId])
+}
+
+// ---------------------------------------------------------
+// THỬ THÁCH TUẦN & VÒNG QUAY (ENGAGEMENT PHASE 3)
+// ---------------------------------------------------------
+
+model WeeklyChallenge {
+  id           String   @id @default(uuid())
+  weekKey      String   @unique  // "2026-W26" ISO week
+  title        String
+  description  String
+  targetMetric String            // "streak" | "score" | "exercises" | "perfect_scores"
+  targetValue  Int
+  rewardGems   Int      @default(0)
+  rewardBadge  String?
+  startsAt     DateTime
+  endsAt       DateTime
+  createdAt    DateTime @default(now())
+
+  participants WeeklyChallengeParticipant[]
+}
+
+model WeeklyChallengeParticipant {
+  id           String    @id @default(uuid())
+  challengeId  String
+  userId       String
+  progress     Int       @default(0)
+  completed    Boolean   @default(false)
+  claimedAt    DateTime?
+
+  challenge WeeklyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+}
+
+model SpinWheelLog {
+  id         String   @id @default(uuid())
+  userId     String
+  prize      String             // "gems_10" | "gems_50" | "xp_100" | "streak_freeze" | "nothing" | "jackpot"
+  prizeValue Int      @default(0)
+  spunAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, spunAt])
 }

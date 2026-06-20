@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: english_pronunciation_app
+title: English Pronunciation Learning Platform
+scope:
+    - english_pronunciation_app/
+source_files: []
+depends_on: []
+related_to: []

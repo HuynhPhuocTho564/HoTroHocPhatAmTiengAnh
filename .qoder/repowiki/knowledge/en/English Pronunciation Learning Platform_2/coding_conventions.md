@@ -1,0 +1,5 @@
+- Server-Client Split: Page routes use async server components for data fetching, delegating interactive UI to dedicated '*Client.tsx' components marked with 'use client'.
+- Polymorphic Question Rendering: The exercise engine uses a switch/if-block pattern on `question.type` to render specific question components (e.g., `SpeakWordQuestion`, `ListenChooseQuestion`).
+- Transaction-Based Gamification: All user progress updates (XP, streaks, badges) are executed within `prisma.$transaction` blocks to ensure data consistency.
+- Admin API Guards: Admin routes consistently use `requireAdminSession()` from `lib/admin-api.ts` to enforce role-based access control before processing requests.
+- Normalized Answer Matching: Text-based answers are normalized (lowercased, stripped of non-alphanumeric chars) before comparison, while IPA symbols use exact string matching.

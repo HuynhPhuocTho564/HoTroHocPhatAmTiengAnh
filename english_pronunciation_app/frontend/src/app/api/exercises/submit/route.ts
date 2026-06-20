@@ -5,8 +5,13 @@ import {
   calculateExerciseRewards,
   calculateLevelFromXp,
   checkAndAwardBadges,
+  calculateNextStreak,
+  computeGemReward,
+  computeXpMultiplier,
   getLeaderboardTargets,
   getNextLevelXp,
+  isRetakeLimitExceeded,
+  shouldIncrementQuest,
 } from "@/lib/gamification";
 import { formatLocalDate, startOfLocalDay } from "@/lib/period";
 import {
@@ -94,8 +99,12 @@ export async function POST(request: NextRequest) {
         id: true,
         xp: true,
         level: true,
+        gems: true,
         streakCount: true,
         longestStreak: true,
+        lastCheckInDate: true,
+        totalCheckIns: true,
+        streakFreezes: true,
       },
     });
 
@@ -141,9 +150,14 @@ export async function POST(request: NextRequest) {
     const scoreSummary = calculateExerciseScore(questionResults);
     const exerciseCompleted = isExerciseCompleted(scoreSummary.exerciseScore);
     const rating = getExerciseRating(scoreSummary.exerciseScore);
+    const gemReward = computeGemReward(rating);
     const today = startOfLocalDay(new Date());
 
-    const [previousBestAttempt, dailyActivityBefore] = await Promise.all([
+    // XP multiplier based on question types (speaking vs listening)
+    const questionTypeIds = exercise.questions.map((q) => q.type.id);
+    const xpMultiplier = computeXpMultiplier(questionTypeIds);
+
+    const [previousBestAttempt, dailyActivityBefore, dailyAttempts] = await Promise.all([
       prisma.exerciseAttempt.findFirst({
         where: {
           userId,
@@ -167,7 +181,17 @@ export async function POST(request: NextRequest) {
           completedExercises: true,
         },
       }),
+      // Count today's attempts for this exercise (retake limit check)
+      prisma.exerciseAttempt.count({
+        where: {
+          userId,
+          exerciseId: exercise.id,
+          createdAt: { gte: today },
+        },
+      }),
     ]);
+
+    const retakeLimitReached = isRetakeLimitExceeded(dailyAttempts);
 
     const rewards = calculateExerciseRewards({
       exerciseScore: scoreSummary.exerciseScore,
@@ -175,6 +199,11 @@ export async function POST(request: NextRequest) {
       completedExercisesTodayBefore: dailyActivityBefore?.completedExercises ?? 0,
       exerciseCompleted,
     });
+
+    // Apply XP multiplier and retake limit
+    const adjustedXpEarned = retakeLimitReached
+      ? Math.round(rewards.xpEarned * 0.1) // 90% reduction after limit
+      : Math.round(rewards.xpEarned * xpMultiplier);
 
     const completedAt = payload.completedAt ? new Date(payload.completedAt) : new Date();
     const totalTimeSpent = answers.reduce((total, answer) => total + Math.max(0, answer.timeSpent ?? 0), 0);
@@ -204,18 +233,20 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const updatedUserXp = user.xp + rewards.xpEarned;
+      const updatedUserXp = user.xp + adjustedXpEarned;
       const updatedUserLevel = Math.max(user.level, calculateLevelFromXp(updatedUserXp));
 
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
-          xp: { increment: rewards.xpEarned },
+          xp: { increment: adjustedXpEarned },
           level: updatedUserLevel,
+          ...(gemReward > 0 ? { gems: { increment: gemReward } } : {}),
         },
         select: {
           xp: true,
           level: true,
+          gems: true,
         },
       });
 
@@ -229,11 +260,11 @@ export async function POST(request: NextRequest) {
         create: {
           userId,
           date: today,
-          xpEarned: rewards.xpEarned,
+          xpEarned: adjustedXpEarned,
           completedExercises: exerciseCompleted ? 1 : 0,
         },
         update: {
-          xpEarned: { increment: rewards.xpEarned },
+          xpEarned: { increment: adjustedXpEarned },
           completedExercises: exerciseCompleted ? { increment: 1 } : undefined,
         },
       });
@@ -265,11 +296,107 @@ export async function POST(request: NextRequest) {
 
       const badgesAwarded = await checkAndAwardBadges(tx, userId, "exercise_submit", completedAt);
 
+      // Quest progress: check active quests and increment if conditions met
+      const questPayload = {
+        exerciseCompleted: exerciseCompleted,
+        topicId: exercise.topicId,
+        soundGroupId: exercise.mapId,
+      };
+      const activeQuests = await tx.dailyQuest.findMany({
+        where: { userId, date: today, completed: false },
+      });
+      let questGemDelta = 0;
+      let questXpDelta = 0;
+      const questUpdates: Array<{
+        id: string;
+        questType: string;
+        progress: number;
+        target: number;
+        completed: boolean;
+        rewardXp: number;
+        rewardGems: number;
+      }> = [];
+
+      for (const quest of activeQuests) {
+        if (shouldIncrementQuest(quest.questType, questPayload)) {
+          const newProgress = quest.progress + 1;
+          const isQuestComplete = newProgress >= quest.target;
+          if (isQuestComplete) {
+            questGemDelta += quest.rewardGems;
+            questXpDelta += quest.rewardXp;
+          }
+          await tx.dailyQuest.update({
+            where: { id: quest.id },
+            data: {
+              progress: newProgress,
+              completed: isQuestComplete,
+              claimedAt: isQuestComplete ? completedAt : undefined,
+            },
+          });
+          questUpdates.push({
+            id: quest.id,
+            questType: quest.questType,
+            progress: newProgress,
+            target: quest.target,
+            completed: isQuestComplete,
+            rewardXp: quest.rewardXp,
+            rewardGems: quest.rewardGems,
+          });
+        }
+      }
+
+      // Apply quest XP/gem rewards to user if any quests completed
+      if (questGemDelta > 0 || questXpDelta > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            ...(questXpDelta > 0 ? { xp: { increment: questXpDelta } } : {}),
+            ...(questGemDelta > 0 ? { gems: { increment: questGemDelta } } : {}),
+          },
+        });
+      }
+
+      // Auto check-in: update streak when user submits an exercise
+      const streakStatus = calculateNextStreak(user.lastCheckInDate, user.streakCount, today, user.streakFreezes);
+      let streakResult = {
+        streakCount: user.streakCount,
+        longestStreak: user.longestStreak,
+        totalCheckIns: user.totalCheckIns,
+        autoCheckedIn: false,
+      };
+      if (!streakStatus.alreadyCheckedIn) {
+        const checkedInUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            lastCheckInDate: completedAt,
+            streakCount: streakStatus.streak,
+            longestStreak: Math.max(streakStatus.streak, user.longestStreak),
+            totalCheckIns: { increment: 1 },
+            ...(streakStatus.usedFreeze ? { streakFreezes: { decrement: 1 } } : {}),
+          },
+          select: {
+            streakCount: true,
+            longestStreak: true,
+            totalCheckIns: true,
+          },
+        });
+        streakResult = {
+          streakCount: checkedInUser.streakCount,
+          longestStreak: checkedInUser.longestStreak,
+          totalCheckIns: checkedInUser.totalCheckIns,
+          autoCheckedIn: true,
+        };
+      }
+
       return {
         attempt,
         updatedUser,
         dailyActivity,
         badgesAwarded,
+        questUpdates,
+        questGemDelta,
+        questXpDelta,
+        streakResult,
       };
     });
 
@@ -292,7 +419,12 @@ export async function POST(request: NextRequest) {
           xpEarned: rewards.baseXp,
           dailyBonusXp: rewards.dailyBonusXp,
           retakeXp: rewards.retakeXp,
-          totalXpEarned: rewards.xpEarned,
+          totalXpEarned: adjustedXpEarned,
+          xpMultiplier: xpMultiplier,
+          retakeLimitReached: retakeLimitReached,
+          gemsEarned: gemReward,
+          questXpEarned: result.questXpDelta,
+          questGemsEarned: result.questGemDelta,
           rankingDelta: rewards.rankingDelta,
           dailyBonusRanking: rewards.dailyBonusRanking,
           retakeRanking: rewards.retakeRanking,
@@ -311,8 +443,10 @@ export async function POST(request: NextRequest) {
         badgesAwarded: result.badgesAwarded,
         previousBestScore: previousBestAttempt?.score ?? null,
         streak: {
-          count: user.streakCount,
-          longest: user.longestStreak,
+          count: result.streakResult.streakCount,
+          longest: result.streakResult.longestStreak,
+          totalCheckIns: result.streakResult.totalCheckIns,
+          autoCheckedIn: result.streakResult.autoCheckedIn,
         },
         questionResults: questionResults.map((questionResult) => ({
           questionId: questionResult.questionId,
@@ -321,6 +455,7 @@ export async function POST(request: NextRequest) {
           accuracyScore: questionResult.accuracyScore,
           feedback: questionResult.feedback,
         })),
+        questUpdates: result.questUpdates,
       },
       201,
     );

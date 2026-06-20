@@ -18,7 +18,7 @@ function failure(code: string, message: string, status = 400) {
 }
 
 function parseType(value: string | null): LeaderboardPeriodType | null {
-  if (value === "tuan" || value === "thang") {
+  if (value === "tuan" || value === "thang" || value === "all") {
     return value;
   }
 
@@ -46,12 +46,64 @@ export async function GET(request: NextRequest) {
     const limit = parseLimit(searchParams.get("limit"));
 
     if (!type) {
-      return failure("INVALID_LEADERBOARD_TYPE", "type phải là tuần hoặc tháng", 400);
+      return failure("INVALID_LEADERBOARD_TYPE", "type phải là tuần, tháng hoặc all", 400);
     }
 
+    const session = await auth();
+
+    // All-time leaderboard: rank users by total XP
+    if (type === "all") {
+      const [rows] = await Promise.all([
+        prisma.user.findMany({
+          where: { status: "ACTIVE" },
+          orderBy: [{ xp: "desc" }, { createdAt: "asc" }],
+          take: limit,
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            level: true,
+            xp: true,
+            streakCount: true,
+          },
+        }),
+      ]);
+
+      const items = rows.map((row, index) => ({
+        rank: index + 1,
+        userId: row.id,
+        username: row.username,
+        avatarUrl: row.avatarUrl,
+        level: row.level,
+        streak: row.streakCount,
+        score: row.xp,
+        correctAnswers: 0,
+        completedExercises: 0,
+        badges: [],
+      }));
+
+      const currentUserId = session?.user?.id;
+      let currentUser = null;
+      if (currentUserId) {
+        const currentUserRow = await prisma.user.findUnique({
+          where: { id: currentUserId },
+          select: { xp: true },
+        });
+        if (currentUserRow) {
+          const betterCount = await prisma.user.count({
+            where: { xp: { gt: currentUserRow.xp }, status: "ACTIVE" },
+          });
+          currentUser = { rank: betterCount + 1, score: currentUserRow.xp };
+        }
+      }
+
+      return success({ type: "all" as const, period: "all", items, currentUser });
+    }
+
+    // Period-based leaderboard (tuan/thang)
     const targetPeriod = period || getLeaderboardPeriod(type, new Date());
 
-    const [session, rows] = await Promise.all([
+    const [periodSession, rows] = await Promise.all([
       auth(),
       prisma.leaderboard.findMany({
         where: {
@@ -104,7 +156,7 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    const currentUserId = session?.user?.id;
+    const currentUserId = periodSession?.user?.id;
     let currentUser = null;
 
     if (currentUserId) {

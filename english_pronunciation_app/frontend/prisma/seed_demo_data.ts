@@ -24,16 +24,18 @@ type DemoUser = {
   longestStreak: number;
   totalCheckIns: number;
   daysAgoCreated: number; // createdAt = today - daysAgoCreated
+  gems: number;
+  streakFreezes: number;
 };
 
 // 6 learner + 1 admin (đã có từ seed_demo_user, nhưng upsert lại cho chắc)
 const DEMO_USERS: DemoUser[] = [
-  { username: "minh_nguyen", email: "minh@demo.app", password: "demo123456", xp: 2450, level: 3, streakCount: 12, longestStreak: 15, totalCheckIns: 18, daysAgoCreated: 20 },
-  { username: "lan_tran", email: "lan@demo.app", password: "demo123456", xp: 1820, level: 2, streakCount: 7, longestStreak: 9, totalCheckIns: 11, daysAgoCreated: 15 },
-  { username: "hoang_le", email: "hoang@demo.app", password: "demo123456", xp: 3200, level: 4, streakCount: 21, longestStreak: 25, totalCheckIns: 30, daysAgoCreated: 30 },
-  { username: "mai_pham", email: "mai@demo.app", password: "demo123456", xp: 980, level: 2, streakCount: 3, longestStreak: 5, totalCheckIns: 6, daysAgoCreated: 8 },
-  { username: "duc_vo", email: "duc@demo.app", password: "demo123456", xp: 4100, level: 5, streakCount: 35, longestStreak: 40, totalCheckIns: 45, daysAgoCreated: 45 },
-  { username: "anh_phan", email: "anh@demo.app", password: "demo123456", xp: 560, level: 1, streakCount: 1, longestStreak: 2, totalCheckIns: 2, daysAgoCreated: 3 },
+  { username: "minh_nguyen", email: "minh@demo.app", password: "demo123456", xp: 2450, level: 3, streakCount: 12, longestStreak: 15, totalCheckIns: 18, daysAgoCreated: 20, gems: 15, streakFreezes: 1 },
+  { username: "lan_tran", email: "lan@demo.app", password: "demo123456", xp: 1820, level: 2, streakCount: 7, longestStreak: 9, totalCheckIns: 11, daysAgoCreated: 15, gems: 10, streakFreezes: 0 },
+  { username: "hoang_le", email: "hoang@demo.app", password: "demo123456", xp: 3200, level: 4, streakCount: 21, longestStreak: 25, totalCheckIns: 30, daysAgoCreated: 30, gems: 25, streakFreezes: 2 },
+  { username: "mai_pham", email: "mai@demo.app", password: "demo123456", xp: 980, level: 2, streakCount: 3, longestStreak: 5, totalCheckIns: 6, daysAgoCreated: 8, gems: 5, streakFreezes: 0 },
+  { username: "duc_vo", email: "duc@demo.app", password: "demo123456", xp: 4100, level: 5, streakCount: 35, longestStreak: 40, totalCheckIns: 45, daysAgoCreated: 45, gems: 40, streakFreezes: 3 },
+  { username: "anh_phan", email: "anh@demo.app", password: "demo123456", xp: 560, level: 1, streakCount: 1, longestStreak: 2, totalCheckIns: 2, daysAgoCreated: 3, gems: 0, streakFreezes: 0 },
 ];
 
 async function main() {
@@ -79,6 +81,8 @@ async function main() {
         longestStreak: demo.longestStreak,
         totalCheckIns: demo.totalCheckIns,
         lastCheckInDate: lastCheckIn,
+        gems: demo.gems,
+        streakFreezes: demo.streakFreezes,
         status: "ACTIVE",
         roleId: userRole.id,
       },
@@ -92,6 +96,8 @@ async function main() {
         longestStreak: demo.longestStreak,
         totalCheckIns: demo.totalCheckIns,
         lastCheckInDate: lastCheckIn,
+        gems: demo.gems,
+        streakFreezes: demo.streakFreezes,
         status: "ACTIVE",
         roleId: userRole.id,
         createdAt,

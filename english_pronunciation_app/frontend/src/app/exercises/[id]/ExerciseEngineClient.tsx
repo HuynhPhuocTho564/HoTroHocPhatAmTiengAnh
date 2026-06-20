@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { playSfx, useSfxMuted } from "@/lib/sfx";
 import { useComboStreak } from "@/hooks/useComboStreak";
+import { useRewardEvents } from "@/components/gamification/effects/RewardEventContext";
 import ListenFeedbackSheet from "./ListenFeedbackSheet";
 import ExerciseSummaryScreen from "./ExerciseSummaryScreen";
 import SpeakWordQuestion from "./SpeakWordQuestion";
@@ -38,6 +39,12 @@ export type ExerciseData = {
   name: string;
   description: string | null;
   questions: ExerciseQuestion[];
+};
+
+type EngineUnlocks = {
+  unlockedSlowAudio: boolean;
+  unlockedIpaReveal: boolean;
+  userLevel?: number;
 };
 
 type WordPrompt = {
@@ -80,6 +87,9 @@ export type SubmitResult = {
     dailyBonusRanking: number;
     retakeXp: number;
     retakeRanking: number;
+    gemsEarned: number;
+    questXpEarned: number;
+    questGemsEarned: number;
   };
   progress: {
     currentXp: number;
@@ -91,6 +101,8 @@ export type SubmitResult = {
   streak: {
     count: number;
     longest: number;
+    totalCheckIns?: number;
+    autoCheckedIn?: boolean;
   };
 };
 
@@ -320,8 +332,10 @@ function PraisePopup({ text, onDismiss }: { text: string; onDismiss: () => void 
   );
 }
 
-export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseData }) {
+export default function ExerciseEngineClient({ exercise, unlocks = { unlockedSlowAudio: false, unlockedIpaReveal: false } }: { exercise: ExerciseData; unlocks?: EngineUnlocks }) {
   const router = useRouter();
+  const { emit } = useRewardEvents();
+  const previousLevelRef = useRef(unlocks.userLevel ?? 0);
   const [startedAt] = useState(() => new Date().toISOString());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -338,6 +352,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
   // SP1 feedback: SFX (ting/buzz) + combo streak (🔥 + lời khen)
   const combo = useComboStreak();
+  const maxComboRef = useRef(0);
   const [muted, setMuted] = useSfxMuted();
 
   const questions = exercise.questions;
@@ -377,6 +392,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
           startedAt,
           completedAt: new Date().toISOString(),
           answers: finalAnswers,
+          maxCombo: maxComboRef.current,
         }),
       });
 
@@ -390,6 +406,38 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
       setSubmitResult(payload.data);
       setSubmitStatus("success");
+
+      // === Emit reward celebration events ===
+      const rewards = payload.data?.rewards;
+      const progress = payload.data?.progress;
+      const badges = payload.data?.badgesAwarded;
+
+      if (rewards) {
+        if (rewards.totalXpEarned > 0) {
+          emit({ type: "xp", amount: rewards.totalXpEarned, label: `+${rewards.totalXpEarned} XP`, icon: "⭐" });
+        }
+        if (rewards.gemsEarned > 0) {
+          emit({ type: "gems", amount: rewards.gemsEarned, label: `+${rewards.gemsEarned} 💎`, icon: "💎" });
+        }
+        if (rewards.questXpEarned > 0) {
+          emit({
+            type: "quest_complete",
+            amount: rewards.questXpEarned,
+            questGems: rewards.questGemsEarned,
+            label: "Nhiệm vụ hoàn thành!",
+            questDesc: "Nhiệm vụ hàng ngày",
+          });
+        }
+      }
+      if (progress && progress.level > previousLevelRef.current) {
+        emit({ type: "level_up", level: progress.level, label: `Lên cấp ${progress.level}!`, icon: "🎯" });
+        previousLevelRef.current = progress.level;
+      }
+      if (badges && Array.isArray(badges)) {
+        for (const badge of badges) {
+          emit({ type: "badge_earned", badgeName: badge.name, label: `Huy hiệu: ${badge.name}`, icon: "🏆" });
+        }
+      }
     } catch {
       setSubmitStatus("error");
       setSubmitError("Không kết nối được API lưu bài làm.");
@@ -434,6 +482,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
       setScore((current) => current + currentQuestion.score);
       playSfx("correct");
       combo.onCorrect();
+      maxComboRef.current = Math.max(maxComboRef.current, combo.combo + 1);
     } else {
       addIncorrectQuestion(answerOpt);
       playSfx("wrong");
@@ -453,6 +502,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
       setScore((current) => current + currentQuestion.score);
       playSfx("correct");
       combo.onCorrect();
+      maxComboRef.current = Math.max(maxComboRef.current, combo.combo + 1);
     } else {
       addIncorrectQuestion(transcript);
       playSfx("wrong");
@@ -582,7 +632,7 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
           (parseWordPrompt(currentQuestion.content).word ? (
             <SpeakWordQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} />
           ) : (
-            <SpeakSentenceQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} />
+            <SpeakSentenceQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} unlockedSlowAudio={unlocks.unlockedSlowAudio} unlockedIpaReveal={unlocks.unlockedIpaReveal} />
           ))}
 
         {currentQuestion.type === "qtype-3-minimal-pairs" && (

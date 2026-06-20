@@ -1,7 +1,7 @@
 # CURRENT_PROJECT_CONTEXT — Nguồn chân thực hiện tại
 
 Ngày lập: 18/06/2026 (SP1)
-Cập nhật: 19/06/2026 — đồng bộ trạng thái thực tế sau SP2 data-layer + SP3a content + engine work (SP1 feedback / listen_choose 3-stage / SP2 summary-redesign).
+Cập nhật: **20/06/2026** — đồng bộ trạng thái thực tế sau SP3b (CD2 12 nhóm) + SP3d (CD4 4 nhóm) + SP4 Mode A (4 UI CĐ4) + SP4 Mode B (acceptedAnswers) + SP7 Batch 1 partial (schema + helpers + tests, Task 1-3/13).
 Thay thế: `PROJECT_CONTEXT.md`, `CURRENT_SYSTEM_STATUS.md`, `project_spec.md` (đã archive vào `PLAN/_Archive/`).
 
 Đây là tài liệu nguồn chân thực về trạng thái dự án. Khi code/AI cần biết "hệ thống hiện có gì", đọc file này trước, rồi mới đến `ACTION_PLAN_NEXT_STEPS.md`, `DB_AUDIT_REPORT.md`, `LESSON_SYLLABUS_STRUCTURE.md`.
@@ -36,7 +36,7 @@ Thay thế: `PROJECT_CONTEXT.md`, `CURRENT_SYSTEM_STATUS.md`, `project_spec.md` 
 - **Gamification nằm ở frontend**: `frontend/src/lib/gamification.ts` (XP, level, badge, leaderboard, daily bonus).
 - **Backend FastAPI**: giữ tối thiểu cho `/health` (mục đích: đáp ứng đề cương có backend, mở rộng sau). Hiện là dead code tối thiểu, không xung đột DB (không có model SQLAlchemy).
 - **1 database PostgreSQL** duy nhất — Prisma (frontend) là chủ. Backend chỉ `SELECT 1` check kết nối.
-- **Exercise engine** đã tách component: `ExerciseEngineClient.tsx` (~1100 dòng) + `ListenFeedbackSheet.tsx` (feedback trong lúc làm, SP1) + `ExerciseSummaryScreen.tsx` (màn tổng kết 3-tier, SP2 summary).
+- **Exercise engine** đã tách component: `ExerciseEngineClient.tsx` (~1100 dòng) + `ListenFeedbackSheet.tsx` (feedback trong lúc làm, SP1) + `ExerciseSummaryScreen.tsx` (màn tổng kết 3-tier, SP2 summary) + 4 component Mode A CĐ4 (`TapStressQuestion`, `ChooseWeakQuestion`, `ChooseLinkingQuestion`, `ChooseAssimilationQuestion`) + `useSynthesisAudio.ts` helper.
 
 ## 3. Gamification đang chạy thật (NGƯỜI DÙNG YÊU CẦU GIỮ ĐẦY ĐỦ)
 
@@ -50,6 +50,10 @@ Thay thế: `PROJECT_CONTEXT.md`, `CURRENT_SYSTEM_STATUS.md`, `project_spec.md` 
 | Daily bonus | `gamification.ts:DAILY_BONUS_TABLE` (2/3/5/8 bài) | chạy thật |
 | Auto badge | `checkAndAwardBadges` chạy submit (reason `exercise_submit`, all category) + checkin (reason `daily_checkin`, streak-only) | chạy thật |
 | Expose streak/previousBest | submit API trả `previousBestScore` + `streak{count,longest}` (read-only, không update) — SP2 summary commit `0a46f06` | chạy thật |
+| **Gem (💎)** | `User.gems`, `gamification.ts:computeGemReward(rating)` (EXCELLENT→+5) | ✅ code xong (SP7 Task 3), **chưa hook submit** (Task 4) |
+| **Shop** | `gamification.ts:SHOP_ITEMS` (3 items: IPA Reveal 50💎, Slow Audio 20💎, Streak Freeze 10💎), `validateShopPurchase()` | ✅ code xong (SP7 Task 3), **chưa tạo route /api/shop** (Task 5) |
+| **Streak Freeze** | `User.streakFreezes`, `gamification.ts:calculateNextStreak(last, streak, today, freezes)` | ✅ code xong + **đã hook checkin route** (SP7 Task 3) |
+| **DailyQuest** | Schema `DailyQuest` model (userId, date, questType, target, progress, completed, rewardXp, rewardGems) | ✅ schema xong (SP7 Task 1), **chưa logic/UI** (Task 7-12) |
 | Level | **2 hệ lệch nhau — flag bug SP6 CHƯA fix** | `gamification.ts:calculateLevelFromXp` (XP-based, API dùng, start level 1) vs `levelSystem.ts` (lesson-based, `LevelDisplay.tsx` dùng, start level 0) — off-by-one |
 
 Bug/ thiếu đã biết (xử lý SP6, KHÔNG xóa `levelSystem.ts`/`mockData.ts`):
@@ -61,67 +65,70 @@ Bug/ thiếu đã biết (xử lý SP6, KHÔNG xóa `levelSystem.ts`/`mockData.t
 
 ## 4. Database hiện tại (catalog v2 đã seed)
 
-26 bảng. **Catalog v2 ĐÃ thực hiện (SP2 data-layer xong)**: 4 topic + **30 sound group** + 44 phoneme + **112 exercise** (shell 30 nhóm) + 25 learning map + 94 QuestionBankItem + 120 question.
+26 bảng (+ DailyQuest mới SP7). **Catalog v2 ĐÃ thực hiện (SP2 data-layer xong)**: 4 topic + **30 sound group** + 44 phoneme + **112 exercise** (shell 30 nhóm) + 25 learning map + 433 QuestionBankItem + 278 question.
 
-**Content thực tế (xác minh 19/06):**
+**Content thực tế (xác minh 20/06):**
 
 | Chủ đề | Nhóm có content | Trạng thái |
 |---|---|---|
 | CĐ1 Nguyên âm (10 nhóm) | **10/10** | ✅ Hoàn thành SP3a (g01–g10, 93 từ) |
-| CĐ2 Phụ âm (12 nhóm) | **0/12** | 🟠 Shell trống — cần biên soạn (neck lớn nhất) |
-| CĐ3 Minimal Pairs Khó (4 nhóm) | **2/4** (g01 front-vowel-mix, g03 final-drop — legacy MVP remap) | 🟠 2 nhóm còn shell |
-| CĐ4 Trọng âm & Nối âm (4 nhóm) | **0/4** | 🟠 Shell trống — rủi ro cao nhất (cần UI mới + content) |
-| **Tổng** | **12/30** | |
+| CĐ2 Phụ âm (12 nhóm) | **12/12** | ✅ MỚI — SP3b hoàn thành (g01–g12, ~120 từ + 69 cặp + ~60 câu) |
+| CĐ3 Minimal Pairs Khó (4 nhóm) | **2/4** (g01 front-vowel-mix, g03 final-drop) | 🟠 2 nhóm còn shell (g02, g04) |
+| CĐ4 Trọng âm & Nối âm (4 nhóm) | **4/4** | ✅ MỚI — SP3d hoàn thành (g01 word-stress có words, g02/03/04 có sentences) |
+| **Tổng** | **28/30** | Chỉ còn 2 nhóm CD3 (g02, g04) |
 
-Seed chính: `frontend/prisma/seed_lessons.ts` (idempotent). Content map: `prisma/lesson-content.ts` (`LESSON_CONTENT_BY_SOUND_GROUP`, 12 keys). Test `src/lib/__tests__/lesson-content.test.ts` threshold `>=10` (thực tế 12).
+Seed chính: `frontend/prisma/seed_lessons.ts` (idempotent). Content map: `prisma/lesson-content.ts` (`LESSON_CONTENT_BY_SOUND_GROUP`, **28 keys**). Test `src/lib/__tests__/lesson-content.test.ts` threshold `>=10` (thực tế 28).
 
-## 5. Cấu trúc IPA v2 (mục tiêu — catalog ĐÃ xong, content ĐANG dở)
+## 5. Cấu trúc IPA v2 (mục tiêu — catalog ĐÃ xong, content GẦN XONG)
 
 | Chủ đề | Nhóm | Bài | Chế độ | Content |
 |---|---:|---:|---|---|
 | 1. Nguyên âm (đơn 6 + đôi 4) | 10 | 40 | 4 chế độ chuẩn | ✅ 10/10 |
-| 2. Phụ âm (5 tầng: Plosives/Fricatives/Affricates/Nasals/Approximants) | 12 | 48 | 4 chế độ chuẩn | 🟠 0/12 |
-| 3. Minimal Pairs Khó (mở khóa sau CĐ1+2 @80%) | 4 | 16 | 4 chế độ chuẩn, 10 câu/bài | 🟠 2/4 |
-| 4. Trọng âm & Nối âm | 4 | 8 | 2 mode đặc thù (A nghe/chọn + B đọc/so khớp `acceptedAnswers`) | 🟠 0/4 |
-| **Tổng** | **30** | **112** | | **12/30** |
+| 2. Phụ âm (5 tầng: Plosives/Fricatives/Affricates/Nasals/Approximants) | 12 | 48 | 4 chế độ chuẩn | ✅ **12/12** MỚI |
+| 3. Minimal Pairs Khó (mở khóa sau CĐ1+2 @80%) | 4 | 16 | 4 chế độ chuẩn, 10 câu/bài | 🟠 2/4 (g02, g04 thiếu) |
+| 4. Trọng âm & Nối âm | 4 | 8 | 2 mode đặc thù (A nghe/chọn + B đọc/so khớp `acceptedAnswers`) | ✅ **4/4** MỚI |
+| **Tổng** | **30** | **112** | | **28/30** |
 
 Unlock threshold: 0/80/80/80 (CĐ1 mở/free, CĐ2/CĐ3/CĐ4 cần 80% chủ đề trước) — **định nghĩa trong catalog nhưng CHƯA implement gating** (xem bug SP6 mục 3).
 
-## 6. Roadmap thực tế — 6 sub-project (SP1–SP6) — trạng thái 19/06
+## 6. Roadmap thực tế — 7 sub-project (SP1–SP7) — trạng thái 20/06
 
-Tổng ước lượng: **~42% → ~60%** (tăng ~18 điểm). Test: **17 → 55** (catalog v2, content, listen-choose-builder, IPA exact-match, sfx, confetti). Build OK xuyên suốt.
+Tổng ước lượng: **~42% → ~72%** (tăng ~30 điểm so snapshot 18/06). Test: **55 → 74+** (catalog v2, content CĐ1-4, listen-choose-builder, IPA exact-match, scoring SP4, gamification SP7, sfx, confetti). Build OK xuyên suốt.
 
-| SP | Nội dung | Snapshot 18/06 | **Hiện 19/06** | Bằng chứng |
+| SP | Nội dung | Snapshot 19/06 | **Hiện 20/06** | Bằng chứng |
 |---|---|---|---|---|
-| SP1 | Dọn PLAN stale + xóa orphan + tạo file này | 100% | **100%** ✅ | 8 commit `bcb8bd5→db34a73` |
-| SP2 | Data layer v2: schema 7 trường + catalog 30 nhóm + seed | ~15% | **~100%** ✅ | schema `8603d18`, catalog `2ea45a3`, seed `cf7f46e`, gate `08de263` |
-| SP3 | Content + seed v2: 20 nhóm DRAFT + 4 nhóm CĐ4 | ~17% | **~40%** 🟠 | SP3a CD1 10/10 (`29ced16→7526202`). **12/30 nhóm có content**. Còn CD2 0/12 + CD4 0/4 (neck lớn nhất) |
-| SP4 | Exercise Engine v2: 4 UI CĐ4 + Mode B multi-answer + scoring multiplier/retake | ~43% | **~70%** 🟠 | Đã xong: listen_choose 3-stage (phoneme ID Stage 1/2/3, `bcfff9d`), SP1 in-exercise feedback (`ListenFeedbackSheet`), speechSynthesis "Nghe mẫu câu", SP2 summary 3-tier + confetti (`0a46f06`). **Còn: 4 UI CĐ4 + Mode B `acceptedAnswers` + multiplier/retake** |
-| SP5 | Admin CRUD QuestionBank/Phoneme/WordItem/SoundGroup/MinimalPair/SentenceItem + users + badges-config | ~40% | **~40%** ⏸ | Chỉ 5 model CRUD (Exercise/Question/Topic/Level/Map). **0/6 model kho + users + badges-config chưa đụng** (tab badges = placeholder) |
-| SP6 | Gamification补全: fix level 2 hệ, all-time leaderboard, auto badge, check-in auto, unlock CĐ3, mailer (tùy chọn) | ~75% | **~76%** ⏸ | SP2 summary expose streak/previousBest (nhỏ). Auto-badge chạy. **Còn: fix level 2 hệ, all-time leaderboard, check-in auto, unlock CĐ3 80%** |
-| v1 nền tảng | Auth/scoring/submit/UI | ~85% | **~88%** | Engine work cải thiện UX |
+| SP1 | Dọn PLAN stale + xóa orphan + tạo file này | 100% | **100%** ✅ | Không đổi |
+| SP2 | Data layer v2: schema 7 trường + catalog 30 nhóm + seed | ~100% | **100%** ✅ | Không đổi |
+| SP3 | Content + seed v2: biên soạn 30 nhóm | ~40% | **~93%** 🟠 | **MỚI**: SP3b CD2 12/12 ✅ + SP3d CD4 4/4 ✅. **28/30 nhóm có content**. Còn 2 nhóm CD3 (g02, g04) |
+| SP4 | Exercise Engine v2: 4 UI CĐ4 + Mode B + scoring multiplier/retake | ~70% | **~85%** 🟠 | **MỚI**: 4 UI Mode A CĐ4 (`TapStress/ChooseWeak/ChooseLinking/ChooseAssimilation`) ✅ + Mode B `acceptedAnswers` ✅ + mic-denied UX fix ✅. **Còn: scoring multiplier/retake limit** |
+| SP5 | Admin CRUD QuestionBank/Phoneme/WordItem/SoundGroup/MinimalPair/SentenceItem + users + badges-config | ~40% | **~40%** ⏸ | Không đổi. 5 model CRUD. **0/6 model kho + users + badges-config chưa đụng** |
+| SP6 | Gamification补全: fix level 2 hệ, all-time leaderboard, check-in auto, unlock CĐ3 80% | ~76% | **~76%** ⏸ | Không đổi |
+| **SP7** | **Gamification 3 yếu tố: Gem+Shop / Daily Quests / Streak Freeze** | — | **~23%** 🟠 | **MỚI**: Task 1 (schema ✅) + Task 2 (4 test TDD ✅) + Task 3 (helpers + checkin hook ✅). **Còn Task 4-13** (submit gem hook, shop route, quest logic, UI, engine unlock) |
+| v1 nền tảng | Auth/scoring/submit/UI | ~88% | **~90%** | SP4 Mode A/B cải thiện UX |
 
-### Cổ phần còn lại (~40%, deadline 28/06 — còn ~9 ngày)
+### Cổ phần còn lại (~28%, deadline 28/06 — còn ~8 ngày)
 
 | Ưu tiên | Việc | Khối lượng | Rủi ro |
 |---|---|---|---|
-| 🔴 | SP3 content CD2 (12 nhóm) + CD4 (4 nhóm) | Lớn nhất — biên soạn IPA + re-seed | CD4 cao nhất |
-| 🔴 | SP4 — 4 UI CĐ4 + Mode B multi-answer + scoring multiplier | Phức tạp kỹ thuật | Cao (UI mới + multi-answer) |
+| 🔴 | SP7 Task 4-13 (gem hook submit, shop route, quest logic + UI + engine unlock) | 10 task, phức tạp | Trung (logic mới + UI mới) |
 | 🟠 | SP6 — unlock CĐ3 gating + fix level 2 hệ + all-time leaderboard + check-in auto | Vừa | Thấp-Trung |
+| 🟠 | SP3 — 2 nhóm CD3 còn thiếu (g02, g04) | Nhỏ | Thấp |
+| 🟡 | SP4 — scoring multiplier/retake limit | Nhỏ | Thấp |
 | 🟡 | SP5 — admin 6 model kho + users + badges-config | Nhiều route+UI | Thấp (không chặn demo lõi) |
 
-### Khuyến nghị 9 ngày tới
+### Khuyến nghị 8 ngày tới
 
-1. **SP3 content là neck** — CD2 (12 nhóm) + CD4 (4 nhóm). Nếu cut để demo vững: ưu tiên **CD2 trước CD4** (CD1+CD2 = phụ âm+nguyên âm = lõi phát âm; CD4 = "đỉm" có thể cut nếu thiếu giờ). User đã chốt làm hết — nhưng flag lại rủi ro.
-2. **SP4 CĐ4 UI phụ thuộc SP3 CD4 content** → làm song song hoặc sau.
-3. **SP6 unlock CĐ3 + fix level 2 hệ** nên làm sớm (ảnh hưởng UX demo: level sai hiển thị, CĐ3 không khóa đúng).
+1. **SP7 là ưu tiên cao nhất** — 10 task còn lại (Task 4-13). Batch 1 (gem hook + shop route) trước, Batch 2 (quests + UI) sau.
+2. **SP6 unlock CĐ3 + fix level 2 hệ** nên làm sớm (ảnh hưởng UX demo: level sai hiển thị, CĐ3 không khóa đúng).
+3. **SP3 2 nhóm CD3** — nhỏ, có thể làm nhanh khi cần lấp đầy content.
 4. **SP5 để cuối** (thịt thêm, không chặn demo).
+5. **Demo data đã dọn sạch** (20/06) — cần tạo admin user hoặc register mới để test. Pipeline re-seed: `db_cleanup → seed_lessons → seed_audio_local → seed_listen_choose_audio → seed_demo_user`.
 
 Đối chiếu `PLAN/01_Roadmap/ACTION_PLAN_NEXT_STEPS.md` (roadmap phase cũ): Phase 1–5 + 7-read đã có code; Phase 6, 8 đang dở — SP2–SP6 là kế hoạch nâng v2 đè lên các phase còn dở.
 
 ## 7. Spec & plan docs (superpowers workflow)
 
-Spec/plan lưu tại `docs/superpowers/specs/` + `docs/superpowers/plans/` (format `YYYY-MM-DD-<topic>-design.md` / `.md`). Danh sách 19/06:
+Spec/plan lưu tại `docs/superpowers/specs/` + `docs/superpowers/plans/` (format `YYYY-MM-DD-<topic>-design.md` / `.md`). Danh sách 20/06:
 
 | Topic | Spec | Plan | Trạng thái |
 |---|---|---|---|
@@ -131,8 +138,15 @@ Spec/plan lưu tại `docs/superpowers/specs/` + `docs/superpowers/plans/` (form
 | listen_choose 3-stage phoneme ID | `2026-06-18-listen-choose-3stage-phoneme-id-design.md` | `.md` | ✅ done |
 | SP3a content CD1 + audio local | `2026-06-18-sp3a-content-cd1-audio-local-design.md` | `.md` | ✅ done |
 | SP3a-fix subcategory + back button | `2026-06-18-sp3a-fix-subcategory-back-button-design.md` | `.md` | ✅ done |
-| SP2 summary-redesign (engine subset) | `2026-06-19-sp2-summary-redesign-design.md` | `2026-06-19-sp2-summary-redesign.md` | ✅ done (`0a46f06`) |
-| SP3 (defer — WPM/phoneme route) | — | — | ⏸ pause brainstorm, chưa chốt scope (xem mục 10) |
+| SP2 summary-redesign (engine subset) | `2026-06-19-sp2-summary-redesign-design.md` | `2026-06-19-sp2-summary-redesign.md` | ✅ done |
+| SP3b content CD2 (12 nhóm Phụ âm) | `2026-06-19-sp3b-content-cd2-design.md` | `2026-06-19-sp3b-content-cd2.md` | ✅ done |
+| SP3b pilot sentence IPA | `2026-06-19-sp3b-pilot-sentence-ipa-design.md` | — | ✅ done |
+| SP3d content CD4 (4 nhóm Trọng âm & Nối âm) | `2026-06-19-sp3d-content-cd4-design.md` | `2026-06-19-sp3d-content-cd4.md` | ✅ done |
+| SP4 Mode A CĐ4 UI (4 dạng listen-style) | `2026-06-19-sp4-modea-cd4-ui-design.md` | `2026-06-19-sp4-modea-cd4-ui.md` | ✅ done |
+| SP4 Mode B acceptedAnswers multi-answer | `2026-06-19-sp4-modeb-accepted-answers-design.md` | `2026-06-19-sp4-modeb-accepted-answers.md` | ✅ done |
+| SP4a voice waveform + speak feedback | `2026-06-19-sp4a-voice-redesign-waveform-design.md` + `sp4a-speak-feedback-bottomsheet-design.md` + `sp4a-minimalpairs-waveform-retake-design.md` | `.md` | ✅ done |
+| **SP7 gamification 3 yếu tố** | `2026-06-19-sp7-gamification-3-elements-design.md` | `2026-06-19-sp7-gamification-3-elements.md` | 🟠 **Task 1-3/13 done** |
+| SP3 (defer — WPM/phoneme route) | — | — | ⏸ pause brainstorm (xem mục 11) |
 
 ## 8. Nguồn ưu tiên đọc khi code
 
@@ -175,3 +189,19 @@ Spec SP2 summary-redesign có section "Defer SP3" mô tả **SAI thực tế** (
 - **C** Per-phoneme coloring polish — nhỏ, gộp được vào B.
 
 Brainstorming pause ở bước chọn scope A/B/C (19/06). Khi resume: hỏi user chốt scope, rồi theo flow brainstorming skill.
+
+## 12. Database state (20/06/2026)
+
+**Demo data đã dọn sạch** (20/06): 0 user, 0 role, 0 gamification data. Content data nguyên vẹn (28/30 nhóm).
+
+**Pipeline re-seed chuẩn:**
+```bash
+cd english_pronunciation_app/frontend
+npx tsx prisma/db_cleanup.ts          # TRUNCATE tất cả
+npm run db:seed:lessons               # Seed lessons (28/30 nhóm content)
+npx tsx prisma/seed_audio_local.ts    # Rút mp3 local (idempotent, 197 file)
+npx tsx prisma/seed_listen_choose_audio.ts  # Bake contrast audio
+npx tsx prisma/seed_demo_user.ts      # Tạo Admin demo user (demo@pronunciation.app)
+```
+
+> ⚠️ `seed_demo_data.ts` (7 fake learners + gamification data) vẫn còn trên disk nhưng **không nên chạy** nếu muốn dữ liệu thật. User register qua `/register` để tạo account thật.

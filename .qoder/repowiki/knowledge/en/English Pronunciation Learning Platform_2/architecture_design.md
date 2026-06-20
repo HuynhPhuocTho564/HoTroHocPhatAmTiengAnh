@@ -1,0 +1,6 @@
+- **Frontend (Next.js App Router):** Uses a server-client split architecture. Server components (`page.tsx`) handle data fetching via Prisma, while client components (`*Client.tsx`) manage interactive exercise engines and UI state.
+- **Backend (FastAPI):** A minimal Python service (`backend/app/main.py`) providing health checks and CORS configuration, intended for future expansion of pronunciation scoring analytics.
+- **Data Layer:** PostgreSQL database managed by Prisma ORM. The schema (`schema.prisma`) models a pedagogical structure: Topics > SoundGroups > Phonemes/WordItems, linked to Exercises and Questions.
+- **Exercise Engine:** A polymorphic client-side engine (`ExerciseEngineClient.tsx`) that renders different question types (Listen-Choose, Speak-Word, Tap-Stress) based on `question.type`.
+- **Authentication:** Integrated via NextAuth v5 with Credentials and Google OAuth providers, storing sessions in JWTs and user data in the `User` table.
+- **Gamification Core:** A dedicated library (`lib/gamification.ts`) handles XP calculation, level progression, streak logic, and badge awarding within database transactions.

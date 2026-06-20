@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 
-type LeaderboardType = "tuan" | "thang";
+type LeaderboardType = "tuan" | "thang" | "all";
 
 type LeaderboardItem = {
   rank: number;
@@ -48,6 +48,7 @@ type LeaderboardData = {
 const filters: Array<{ id: LeaderboardType; name: string }> = [
   { id: "tuan", name: "Tuần này" },
   { id: "thang", name: "Tháng này" },
+  { id: "all", name: "Tất thời gian" },
 ];
 
 function getRankLabel(rank: number) {
@@ -104,7 +105,7 @@ export default function LeaderboardPage() {
       <main className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-neutral-900 mb-3">Bảng xếp hạng</h1>
-          <p className="text-lg text-neutral-600">Điểm hạng reset theo tuần/tháng để người mới vẫn có cơ hội cạnh tranh.</p>
+          <p className="text-lg text-neutral-600">Điểm hạng reset theo tuần/tháng. Tất thời gian xếp theo tổng XP.</p>
         </div>
 
         <div className="flex justify-center gap-2 mb-8">
@@ -133,7 +134,9 @@ export default function LeaderboardPage() {
                     {data.type}
                   </Badge>
                 </div>
-                <div className="text-sm text-neutral-600">Kỳ {data.period}</div>
+                <div className="text-sm text-neutral-600">
+                  {data.type === "all" ? "Tất thời gian" : `Kỳ ${data.period}`}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-primary-600">#{data.currentUser.rank}</div>
@@ -195,7 +198,9 @@ export default function LeaderboardPage() {
 
                     <div className="text-right">
                       <div className="text-xl font-bold text-neutral-900">{user.score.toLocaleString("vi-VN")}</div>
-                      <div className="text-xs text-neutral-500">điểm hạng</div>
+                      <div className="text-xs text-neutral-500">
+                        {data?.type === "all" ? "XP" : "điểm hạng"}
+                      </div>
                     </div>
                   </div>
                 ))}

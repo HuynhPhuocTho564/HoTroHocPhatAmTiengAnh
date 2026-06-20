@@ -1,96 +1,79 @@
 "use client";
 
 import React from "react";
-import { getLevelInfo, getLevelColor } from "@/lib/levelSystem";
+import { calculateLevelFromXp, getNextLevelXp } from "@/lib/gamification";
 import Card from "@/components/ui/Card";
 
 type LevelDisplayProps = {
-  completedLessons: number;
+  xp: number;
   variant?: "compact" | "full";
 };
 
 /**
- * LevelDisplay Component - Hiển thị cấp độ và tiến trình
- * 
+ * LevelDisplay Component - Hiển thị cấp độ XP (gamification.ts-based)
+ * Aligned with calculateLevelFromXp: level = floor(sqrt(xp/100)) + 1
+ *
  * Props:
- * - completedLessons: Số bài học đã hoàn thành
+ * - xp: Tổng XP của user
  * - variant: "compact" (nhỏ gọn) hoặc "full" (đầy đủ)
  */
 export default function LevelDisplay({
-  completedLessons,
+  xp,
   variant = "compact",
 }: LevelDisplayProps) {
-  const levelInfo = getLevelInfo(completedLessons);
-  const colors = getLevelColor(levelInfo.level);
+  const level = calculateLevelFromXp(xp);
+  const nextLevelXp = getNextLevelXp(level);
+  const previousLevelXp = level <= 1 ? 0 : getNextLevelXp(level - 1);
+  const progress = nextLevelXp === previousLevelXp
+    ? 0
+    : Math.min(100, Math.round(((xp - previousLevelXp) / (nextLevelXp - previousLevelXp)) * 100));
 
   if (variant === "compact") {
     return (
-      <div
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 ${colors.bg} ${colors.border}`}
-      >
-        <span className="text-xl">{levelInfo.icon}</span>
+      <div className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-300 bg-primary-50 px-3 py-1.5">
+        <span className="text-xl">🎓</span>
         <div className="text-left">
-          <div className={`text-xs font-bold ${colors.text}`}>
-            Cấp {levelInfo.level}
+          <div className="text-xs font-bold text-primary-700">
+            Cấp {level}
           </div>
-          <div className="text-xs text-neutral-600">{levelInfo.title}</div>
+          <div className="text-xs text-neutral-600">{xp.toLocaleString()} XP</div>
         </div>
       </div>
     );
   }
 
   return (
-    <Card className={`${colors.bg} border-2 ${colors.border}`}>
-      <div className="flex items-center justify-between mb-4">
+    <Card className="border-2 border-primary-300 bg-primary-50">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="text-5xl">{levelInfo.icon}</div>
+          <div className="text-5xl">🎓</div>
           <div>
-            <div className={`text-2xl font-bold ${colors.text}`}>
-              Cấp {levelInfo.level}
+            <div className="text-2xl font-bold text-primary-700">
+              Cấp {level}
             </div>
-            <div className="text-sm text-neutral-600">{levelInfo.title}</div>
+            <div className="text-sm text-neutral-600">{xp.toLocaleString()} XP</div>
           </div>
         </div>
       </div>
 
       {/* Progress Bar */}
       <div className="mb-3">
-        <div className="flex justify-between text-xs text-neutral-600 mb-2">
+        <div className="mb-2 flex justify-between text-xs text-neutral-600">
           <span>Tiến độ lên cấp</span>
-          <span>
-            {levelInfo.currentLessons}/5 bài
-          </span>
+          <span>{progress}%</span>
         </div>
-        <div className="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-200">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              levelInfo.level <= 2
-                ? "bg-sky-500"
-                : levelInfo.level <= 4
-                ? "bg-primary-500"
-                : levelInfo.level <= 6
-                ? "bg-purple-500"
-                : levelInfo.level <= 8
-                ? "bg-accent-500"
-                : "bg-yellow-500"
-            }`}
-            style={{ width: `${levelInfo.progress}%` }}
+            className="h-full rounded-full bg-primary-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
       {/* Next Level Info */}
-      <div className="text-xs text-neutral-600 text-center">
-        {levelInfo.lessonsForNextLevel > 0 ? (
-          <>
-            Còn <span className="font-bold text-neutral-900">{levelInfo.lessonsForNextLevel} bài</span> để lên{" "}
-            <span className="font-bold">Cấp {levelInfo.level + 1}</span>
-          </>
-        ) : (
-          <span className="font-bold text-success-600">
-            🎉 Đã đạt cấp độ tối đa!
-          </span>
-        )}
+      <div className="text-center text-xs text-neutral-600">
+        Còn <span className="font-bold text-neutral-900">{(nextLevelXp - xp).toLocaleString()} XP</span> để lên{" "}
+        <span className="font-bold">Cấp {level + 1}</span>
       </div>
     </Card>
   );
