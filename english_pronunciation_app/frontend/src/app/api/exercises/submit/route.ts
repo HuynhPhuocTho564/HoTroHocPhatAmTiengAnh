@@ -123,7 +123,19 @@ export async function POST(request: NextRequest) {
         throw new Error(`Question missing after validation: ${answer.questionId}`);
       }
 
-      return scoreQuestion(question, answer);
+      // v2 Mode B: map acceptedAnswers (Prisma JsonValue → string[] | null) cho scoreVoice multi-match
+      const scoringQuestion = {
+        id: question.id,
+        answer: question.answer,
+        score: question.score,
+        type: question.type,
+        acceptedAnswers: Array.isArray(question.acceptedAnswers)
+          ? (question.acceptedAnswers as string[])
+          : null,
+        options: question.options,
+      };
+
+      return scoreQuestion(scoringQuestion, answer);
     });
 
     const scoreSummary = calculateExerciseScore(questionResults);

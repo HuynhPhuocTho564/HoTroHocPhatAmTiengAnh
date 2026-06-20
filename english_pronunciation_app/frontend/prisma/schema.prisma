@@ -37,6 +37,12 @@ model User {
   totalCheckIns   Int       @default(0) // Tổng số ngày đã điểm danh
   lastCheckInDate DateTime? // Ngày điểm danh cuối cùng (để tránh check-in 2 lần/ngày)
 
+  // v2 SP7 Gamification: Gem + Shop + Streak Freeze
+  gems              Int       @default(0)    // Tiền tệ ảo
+  streakFreezes     Int       @default(0)    // Số bùa đóng băng sở hữu
+  unlockedIpaReveal Boolean   @default(false) // Item Kính Lúp IPA unlock
+  unlockedSlowAudio Boolean   @default(false) // Item Loa Ma Thuật unlock
+
   roleId String
   role   Role   @relation(fields: [roleId], references: [id])
 
@@ -46,6 +52,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   userBadges       UserBadge[]
   leaderboards     Leaderboard[]
+  dailyQuests      DailyQuest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,12 +94,32 @@ model Leaderboard {
   score              Int      @default(0) // DiemSo
   correctAnswers     Int      @default(0) // SoCauDung
   completedExercises Int      @default(0) // SoBaiLam
-  type               String // LoaiKy: 'tuan' hoặc 'thang'
-  period             String // KyXepHang: vd "2026-W22" hoặc "2026-06"
+  type               String // LoaiKy: 'tuan' ho?c 'thang'
+  period             String // KyXepHang: vd "2026-W22" ho?c "2026-06"
   updatedAt          DateTime @updatedAt // ThoiGianCapNhat
 
   @@unique([userId, type, period])
   @@index([type, period, score])
+}
+
+// v2 SP7 Gamification: Daily Quests (3 quest/ngày, cá nhân hóa)
+model DailyQuest {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime               // yyyy-mm-dd (start of day)
+  questType   String                 // "PRACTICE_3" | "CD2_3" | "CD4_LINKING_3"
+  target      Int                    // 3
+  progress    Int       @default(0)
+  completed   Boolean   @default(false)
+  rewardXp    Int                    // 50
+  rewardGems  Int                    // 10
+  claimedAt   DateTime?              // khi reward claim (completed + gem/xp awarded)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, date, questType])
+  @@index([userId, date])
 }
 
 model Progress {

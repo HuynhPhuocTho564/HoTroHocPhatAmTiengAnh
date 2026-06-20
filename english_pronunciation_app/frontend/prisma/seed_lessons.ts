@@ -23,7 +23,7 @@
  * Chạy: npm run db:seed:lessons  (hoặc npx prisma db seed)
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   TOPICS,
   SOUND_GROUPS,
@@ -69,6 +69,14 @@ function mapDifficulty(d: number): "EASY" | "MEDIUM" | "HARD" {
   if (d >= 6) return "HARD";
   return "MEDIUM";
 }
+
+// v2 CĐ4: map nhóm CĐ4 → QuestionType cụ thể (override catalog placeholder mode_a questionTypeId)
+const CD4_QTYPE_BY_GROUP: Record<string, string> = {
+  "map-t4-g01-word-stress": "qtype-4-tap-stress",
+  "map-t4-g02-weak-forms": "qtype-5-choose-weak",
+  "map-t4-g03-linking": "qtype-6-choose-linking",
+  "map-t4-g04-assimilation": "qtype-7-choose-assimilation",
+};
 
 /**
  * Fetch audio thật từ Free Dictionary API cho một từ.
@@ -283,8 +291,18 @@ async function seedWordItems(soundGroupId: string, words: WordItemData[]) {
 
     // === SỬA LỖI NGHIÊM TRỌNG 3: fetch audio thật, xác định status theo audio ===
     let audioUrl = word.audioUrl ?? null;
+
+    // Idempotent re-seed: nếu DB đã có WordItem ACTIVE với audioUrl local (/audio/...),
+    // giữ nguyên audioUrl + status — không re-fetch API (tránh flip ACTIVE→NEEDS_REVIEW
+    // khi API flaky dù file local đã có từ seed_audio_local run trước).
     if (!audioUrl && word.sourceType === "FREE_API") {
-      if (audioCache.has(word.word)) {
+      const existing = await prisma.wordItem.findFirst({
+        where: { word: word.word, ipa: word.ipa, phonemeId: phoneme.id },
+        select: { audioUrl: true, status: true, audioSource: true },
+      });
+      if (existing && existing.status === "ACTIVE" && existing.audioUrl && existing.audioUrl.startsWith("/audio/")) {
+        audioUrl = existing.audioUrl;
+      } else if (audioCache.has(word.word)) {
         audioUrl = audioCache.get(word.word) ?? null;
       } else {
         audioUrl = await fetchAudioUrl(word.word);
@@ -317,6 +335,9 @@ async function seedWordItems(soundGroupId: string, words: WordItemData[]) {
         sourceType: word.sourceType,
         sourceUrl: word.sourceUrl ?? null,
         reviewNote: word.reviewNote ?? null,
+        syllables: word.syllables ? JSON.parse(JSON.stringify(word.syllables)) : null,
+        stressIndex: word.stressIndex ?? null,
+        wordStressType: word.wordStressType ?? null,
       },
       create: {
         word: word.word,
@@ -330,6 +351,9 @@ async function seedWordItems(soundGroupId: string, words: WordItemData[]) {
         sourceType: word.sourceType,
         sourceUrl: word.sourceUrl ?? null,
         reviewNote: word.reviewNote ?? null,
+        syllables: word.syllables ? JSON.parse(JSON.stringify(word.syllables)) : null,
+        stressIndex: word.stressIndex ?? null,
+        wordStressType: word.wordStressType ?? null,
       },
     });
   }
@@ -659,7 +683,7 @@ async function generateLearningMaps() {
   for (const sg of SOUND_GROUPS) {
     const mapId = `map-${sg.id}`;
     const content = getContentBySoundGroup(sg.id);
-    const hasContent = Boolean(content && content.words.length > 0);
+    const hasContent = Boolean(content && (content.words.length > 0 || content.sentences.length > 0));
 
     await prisma.learningMap.upsert({
       where: { id: mapId },
@@ -691,7 +715,7 @@ async function generateExercises() {
   for (const sg of SOUND_GROUPS) {
     const mapId = `map-${sg.id}`;
     const content = getContentBySoundGroup(sg.id);
-    const hasContent = Boolean(content && content.words.length > 0);
+    const hasContent = Boolean(content && (content.words.length > 0 || content.sentences.length > 0));
     // v2: mode theo topic (CĐ1-3: 4 mode chuẩn; CĐ4: 2 mode đặc thù)
     const modesForTopic = getModesForTopic(sg.topicId);
 
@@ -777,7 +801,7 @@ async function generateQuestions() {
 
   for (const sg of SOUND_GROUPS) {
     const content = getContentBySoundGroup(sg.id);
-    if (!content || content.words.length === 0) continue;
+    if (!content || (content.words.length === 0 && content.sentences.length === 0)) continue;
 
     for (const mode of EXERCISE_MODES) {
       const exerciseId = generateExerciseId(sg.id, mode.id);
@@ -887,6 +911,147 @@ async function generateQuestions() {
         });
         console.log(`   ✓ ${sg.id} listen_choose: ${questions3stage.length} câu 3-stage`);
         continue; // skip nhánh bank cũ (word-mode) — unreachable cho listen_choose CĐ1-3
+      }
+
+      // === v2 CĐ4 Mode A (mode_a_listen_choose): sinh Question trực tiếp từ content (bypass bank) ===
+      if (mode.id === "mode_a_listen_choose" && sg.topicId === "topic-4-stress-connected") {
+        const cd4QtypeId = CD4_QTYPE_BY_GROUP[sg.id];
+        if (!cd4QtypeId) {
+          await prisma.exercise.update({ where: { id: exerciseId }, data: { status: "DRAFT", questionCount: 0 } });
+          continue;
+        }
+        await prisma.question.deleteMany({ where: { exerciseId } }); // idempotent
+        let qIdx = 1;
+
+        if (sg.id === "map-t4-g01-word-stress") {
+          // Word Stress: iterate words (có audio), tap-stress question
+          for (const w of content.words) {
+            const wordItem = await prisma.wordItem.findFirst({ where: { word: w.word, ipa: w.ipa } });
+            if (!wordItem || wordItem.status !== "ACTIVE" || !wordItem.audioUrl) continue;
+            const questionId = generateQuestionId(exerciseId, qIdx);
+            const contentJson = JSON.stringify({
+              mode: "mode_a_listen_choose",
+              qtype: "tap-stress",
+              word: w.word,
+              ipa: w.ipa,
+              syllables: w.syllables ?? [],
+              stressIndex: w.stressIndex ?? 0,
+              audioUrl: wordItem.audioUrl,
+            });
+            await prisma.question.upsert({
+              where: { id: questionId },
+              update: { name: `Q${qIdx}`, content: contentJson, answer: String(w.stressIndex ?? 0), score: 10, status: "ACTIVE", typeId: qtypeMap[cd4QtypeId].id },
+              create: { id: questionId, name: `Q${qIdx}`, content: contentJson, answer: String(w.stressIndex ?? 0), score: 10, status: "ACTIVE", typeId: qtypeMap[cd4QtypeId].id, exerciseId },
+            });
+            // AnswerOption = mỗi âm tiết (user bấm 1 — single select, scoring SP4)
+            await prisma.answerOption.deleteMany({ where: { questionId } });
+            const syls = w.syllables ?? [];
+            for (let i = 0; i < syls.length; i++) {
+              await prisma.answerOption.create({ data: { content: syls[i], questionId } });
+            }
+            qIdx++;
+            totalQuestions++;
+          }
+        } else {
+          // g02 weak / g03 linking / g04 assimilation: iterate sentences
+          for (const s of content.sentences) {
+            const questionId = generateQuestionId(exerciseId, qIdx);
+            let contentJson: string;
+            let answer: string;
+            const options: string[] = [];
+
+            if (sg.id === "map-t4-g02-weak-forms") {
+              const weakWords = s.weakWords ?? [];
+              contentJson = JSON.stringify({ mode: "mode_a_listen_choose", qtype: "choose-weak", sentence: s.sentence, ipa: s.ipa ?? "", weakWords, audioUrl: null });
+              answer = weakWords.join(",");
+              options.push(...s.sentence.replace(/[.,!?]/g, "").split(/\s+/).filter(Boolean));
+            } else if (sg.id === "map-t4-g03-linking") {
+              const linkingPairs = s.linkingPairs ?? [];
+              contentJson = JSON.stringify({ mode: "mode_a_listen_choose", qtype: "choose-linking", sentence: s.sentence, ipa: s.ipa ?? "", linkingPairs, audioUrl: null });
+              answer = linkingPairs.map((p) => p.join("→")).join(",");
+              const words = s.sentence.replace(/[.,!?]/g, "").split(/\s+/).filter(Boolean);
+              for (let i = 0; i < words.length - 1; i++) options.push(`${words[i]}→${words[i + 1]}`);
+            } else {
+              // g04 assimilation
+              contentJson = JSON.stringify({ mode: "mode_a_listen_choose", qtype: "choose-assimilation", sentence: s.sentence, ipa: s.ipa ?? "", assimilationType: s.assimilationType ?? "", original: s.assimOriginal ?? "", result: s.assimResult ?? "", audioUrl: null });
+              answer = s.assimResult ?? "";
+              options.push(s.assimResult ?? "", s.assimOriginal ?? "");
+            }
+
+            await prisma.question.upsert({
+              where: { id: questionId },
+              update: { name: `Q${qIdx}`, content: contentJson, answer, score: 10, status: "ACTIVE", typeId: qtypeMap[cd4QtypeId].id },
+              create: { id: questionId, name: `Q${qIdx}`, content: contentJson, answer, score: 10, status: "ACTIVE", typeId: qtypeMap[cd4QtypeId].id, exerciseId },
+            });
+            await prisma.answerOption.deleteMany({ where: { questionId } });
+            for (const opt of options) {
+              await prisma.answerOption.create({ data: { content: opt, questionId } });
+            }
+            qIdx++;
+            totalQuestions++;
+          }
+        }
+
+        const countA = qIdx - 1;
+        await prisma.exercise.update({ where: { id: exerciseId }, data: { questionCount: countA, status: countA > 0 ? "ACTIVE" : "DRAFT" } });
+        console.log(`   ✓ ${sg.id} mode_a: ${countA} câu`);
+        continue; // skip nhánh bank — CĐ4 không qua QuestionBankItem
+      }
+
+      // === v2 CĐ4 Mode B (mode_b_speak_match): đọc từ/câu, acceptedAnswers multi (g02) ===
+      if (mode.id === "mode_b_speak_match" && sg.topicId === "topic-4-stress-connected") {
+        await prisma.question.deleteMany({ where: { exerciseId } }); // idempotent
+        let qIdx = 1;
+
+        if (sg.id === "map-t4-g01-word-stress") {
+          // Đọc từ đúng trọng âm
+          for (const w of content.words) {
+            const wordItem = await prisma.wordItem.findFirst({ where: { word: w.word, ipa: w.ipa } });
+            if (!wordItem) continue;
+            const questionId = generateQuestionId(exerciseId, qIdx);
+            const contentJson = JSON.stringify({
+              mode: "mode_b_speak_match",
+              word: w.word,
+              ipa: w.ipa,
+              syllables: w.syllables ?? [],
+              stressIndex: w.stressIndex ?? 0,
+              audioUrl: wordItem.audioUrl ?? null,
+            });
+            await prisma.question.upsert({
+              where: { id: questionId },
+              update: { name: `Q${qIdx}`, content: contentJson, answer: w.word, score: 15, status: "ACTIVE", typeId: qtypeMap["qtype-2-voice"].id, acceptedAnswers: Prisma.DbNull },
+              create: { id: questionId, name: `Q${qIdx}`, content: contentJson, answer: w.word, score: 15, status: "ACTIVE", typeId: qtypeMap["qtype-2-voice"].id, exerciseId, acceptedAnswers: Prisma.DbNull },
+            });
+            qIdx++;
+            totalQuestions++;
+          }
+        } else {
+          // g02/3/4: đọc câu, acceptedAnswers multi (g02) hoặc đơn (g03/4 → null)
+          for (const s of content.sentences) {
+            const questionId = generateQuestionId(exerciseId, qIdx);
+            const contentJson = JSON.stringify({
+              mode: "mode_b_speak_match",
+              sentence: s.sentence,
+              ipa: s.ipa ?? "",
+              acceptedAnswers: s.acceptedAnswers ?? undefined,
+            });
+            const accepted = s.acceptedAnswers && s.acceptedAnswers.length > 0
+              ? JSON.parse(JSON.stringify(s.acceptedAnswers))
+              : null;
+            await prisma.question.upsert({
+              where: { id: questionId },
+              update: { name: `Q${qIdx}`, content: contentJson, answer: s.sentence, score: 20, status: "ACTIVE", typeId: qtypeMap["qtype-2-voice"].id, acceptedAnswers: accepted },
+              create: { id: questionId, name: `Q${qIdx}`, content: contentJson, answer: s.sentence, score: 20, status: "ACTIVE", typeId: qtypeMap["qtype-2-voice"].id, exerciseId, acceptedAnswers: accepted },
+            });
+            qIdx++;
+            totalQuestions++;
+          }
+        }
+
+        const countB = qIdx - 1;
+        await prisma.exercise.update({ where: { id: exerciseId }, data: { questionCount: countB, status: countB > 0 ? "ACTIVE" : "DRAFT" } });
+        console.log(`   ✓ ${sg.id} mode_b: ${countB} câu`);
+        continue; // skip nhánh bank
       }
 
       // Lấy QuestionBankItem ACTIVE của sound group + questionType tương ứng

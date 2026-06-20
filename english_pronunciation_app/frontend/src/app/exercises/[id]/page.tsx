@@ -79,6 +79,9 @@ export default async function ExercisePage({ params }: { params: Promise<{ id: s
       content: question.content,
       type: question.type.id,
       answer: question.answer,
+      acceptedAnswers: Array.isArray(question.acceptedAnswers)
+        ? (question.acceptedAnswers as string[])
+        : null,
       score: question.score,
       options: getQuestionOptions(question),
     })),

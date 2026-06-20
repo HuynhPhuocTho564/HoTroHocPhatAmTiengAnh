@@ -198,3 +198,94 @@ test("scoreMultipleChoice: nhóm 3-âm g03 /ɑː/&/ʌ/&/ə/ — normalize rỗng
   });
   assert.equal(wrongResult2.isCorrect, false);
 });
+
+// ===== SP4 Mode A: CĐ4 scoring (qtype-4..7) =====
+
+test("scoreTapStress (qtype-4): chọn đúng âm tiết nhấn → isCorrect", () => {
+  const q = makeQuestion({
+    answer: "0",
+    score: 10,
+    type: { id: "qtype-4-tap-stress", name: "Tap stress" },
+    options: [
+      { id: "o0", content: "pho" },
+      { id: "o1", content: "to" },
+      { id: "o2", content: "graph" },
+    ],
+  });
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedOptionId: "o0" }).isCorrect, true);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedOptionId: "o1" }).isCorrect, false);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedOptionId: "o2" }).isCorrect, false);
+});
+
+test("scoreMultiSelect (qtype-5 choose-weak): đúng set → isCorrect, thiếu/thừa → false", () => {
+  const q = makeQuestion({
+    answer: "to,the",
+    score: 10,
+    type: { id: "qtype-5-choose-weak", name: "Choose weak" },
+    options: [],
+  });
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedText: "to,the" }).isCorrect, true);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedText: "to" }).isCorrect, false);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedText: "to,the,a" }).isCorrect, false);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedText: "" }).isCorrect, false);
+});
+
+test("scoreMultiSelect (qtype-6 choose-linking): đúng set pair → isCorrect", () => {
+  const q = makeQuestion({
+    answer: "Turn→off",
+    score: 10,
+    type: { id: "qtype-6-choose-linking", name: "Choose linking" },
+    options: [],
+  });
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedText: "Turn→off" }).isCorrect, true);
+  assert.equal(
+    scoreQuestion(q, { questionId: "question-1", selectedText: "Turn→off,off→the" }).isCorrect,
+    false,
+  );
+});
+
+test("scoreSingleSelect (qtype-7 choose-assimilation): chọn đúng result (IPA exact) → isCorrect", () => {
+  const q = makeQuestion({
+    answer: "didʒu",
+    score: 10,
+    type: { id: "qtype-7-choose-assimilation", name: "Choose assimilation" },
+    options: [
+      { id: "o0", content: "didʒu" },
+      { id: "o1", content: "did you" },
+    ],
+  });
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedOptionId: "o0" }).isCorrect, true);
+  assert.equal(scoreQuestion(q, { questionId: "question-1", selectedOptionId: "o1" }).isCorrect, false);
+});
+
+// ===== SP4 Mode B: acceptedAnswers multi-answer (scoreVoice) =====
+
+test("scoreVoice với acceptedAnswers: match dạng 2 (I am) → isCorrect", () => {
+  const q = makeQuestion({
+    answer: "I'm going to the shop",
+    score: 25,
+    type: { id: "qtype-2-voice", name: "Voice" },
+    options: [],
+    acceptedAnswers: ["I'm going to the shop", "I am going to the shop"],
+  });
+  // user nói "I am going to the shop" (dạng 2) → accuracy cao vs dạng 2 → isCorrect
+  const r = scoreQuestion(q, { questionId: "question-1", transcript: "I am going to the shop" });
+  assert.equal(r.isCorrect, true);
+});
+
+test("scoreVoice không acceptedAnswers: giữ logic cũ (single answer)", () => {
+  const q = makeQuestion({
+    answer: "Turn off the light",
+    score: 25,
+    type: { id: "qtype-2-voice", name: "Voice" },
+    options: [],
+  });
+  assert.equal(
+    scoreQuestion(q, { questionId: "question-1", transcript: "Turn off the light" }).isCorrect,
+    true,
+  );
+  assert.equal(
+    scoreQuestion(q, { questionId: "question-1", transcript: "completely different" }).isCorrect,
+    false,
+  );
+});

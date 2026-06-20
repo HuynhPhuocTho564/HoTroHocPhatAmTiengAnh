@@ -83,11 +83,14 @@ async function main() {
     // Idempotent: skip nếu file đã có
     try {
       await fs.access(localPath);
-      // File đã có → chỉ cập nhật DB nếu audioUrl chưa phải local
-      if (w.audioUrl !== localUrl) {
+      // File đã có → cập nhật DB: audioUrl local + flip status ACTIVE
+      // (status có thể bị NEEDS_REVIEW do API flaky lúc seed_lessons, dù file local đã có từ run trước)
+      const needsUpdate =
+        w.audioUrl !== localUrl || w.status !== "ACTIVE";
+      if (needsUpdate) {
         await prisma.wordItem.update({
           where: { id: w.id },
-          data: { audioUrl: localUrl, audioSource: "FREE_DICTIONARY" },
+          data: { audioUrl: localUrl, audioSource: "FREE_DICTIONARY", status: "ACTIVE" },
         });
       }
       skipped++;

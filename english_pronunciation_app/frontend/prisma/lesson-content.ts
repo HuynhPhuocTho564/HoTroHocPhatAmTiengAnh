@@ -23,6 +23,10 @@ export type WordItemData = {
   sourceType: "MANUAL" | "FREE_API" | "LICENSED";
   sourceUrl?: string;
   reviewNote?: string;
+  // v2 CĐ4: cho Word Stress (UI tap-stress). Lưu DB WordItem (schema đã có cột).
+  syllables?: string[];
+  stressIndex?: number;
+  wordStressType?: "WORD_STRESS" | "WEAK_FORM" | "LINKING" | "ASSIMILATION";
 };
 
 export type MinimalPairData = {
@@ -53,6 +57,13 @@ export type SentenceItemData = {
   status: "ACTIVE" | "DRAFT" | "NEEDS_REVIEW";
   sourceType: "MANUAL" | "FREE_API" | "LICENSED";
   reviewNote?: string;
+  // v2 CĐ4: authoring field (KHÔNG lưu DB SentenceItem — seed build Question.contentJson từ đây)
+  weakWords?: string[];
+  linkingPairs?: string[][];
+  assimilationType?: string;
+  assimOriginal?: string;
+  assimResult?: string;
+  acceptedAnswers?: string[];
 };
 
 // ============================================================================
@@ -1422,6 +1433,66 @@ export const SENTENCES_T2_G12: SentenceItemData[] = [
   { sentence: "Sweet wind beyond the yell.", soundGroupId: "map-t2-g12-w-j", targetWords: ["sweet", "wind", "beyond", "yell"], targetPhonemes: ["/w/", "/j/"], difficulty: 5, translation: "Gió ngọt phía sau tiếng hét.", status: "ACTIVE", sourceType: "MANUAL" },
 ];
 
+// ============================================================================
+// TOPIC 4 - NHÓM 1: Word Stress (CĐ4) — Mode A: tap-stress / Mode B: đọc từ
+// ============================================================================
+
+export const WORDS_T4_G01_WORD_STRESS: WordItemData[] = [
+  { word: "photograph", ipa: "/ˈfoʊtəɡræf/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/əʊ/"], difficulty: 4, exampleSentence: "Take a photograph of the view.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["pho","to","graph"], stressIndex: 0, wordStressType: "WORD_STRESS", reviewNote: "Stress syllable 1 (pho) — cặp với photographer (stress shift)" },
+  { word: "photographer", ipa: "/fəˈtɑɡrəfər/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/ɑː/"], difficulty: 5, exampleSentence: "She is a wedding photographer.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["pho","tog","ra","pher"], stressIndex: 1, wordStressType: "WORD_STRESS", reviewNote: "Stress syllable 2 (tog) — stress shift vs photograph" },
+  { word: "balloon", ipa: "/bəˈlun/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/uː/"], difficulty: 3, exampleSentence: "The balloon floats up.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["ba","lloon"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+  { word: "guitar", ipa: "/ɡɪˈtɑr/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/ɑː/"], difficulty: 3, exampleSentence: "He plays the guitar.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["gui","tar"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+  { word: "hotel", ipa: "/hoʊˈtɛl/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/e/"], difficulty: 3, exampleSentence: "We stayed at a hotel.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["ho","tel"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+  { word: "tomorrow", ipa: "/təˈmɔroʊ/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/ɔː/"], difficulty: 4, exampleSentence: "See you tomorrow.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["to","mor","row"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+  { word: "banana", ipa: "/bəˈnænə/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/æ/"], difficulty: 4, exampleSentence: "I eat a banana for breakfast.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["ba","na","na"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+  { word: "computer", ipa: "/kəmˈpjutər/", soundGroupId: "map-t4-g01-word-stress", targetPhonemes: ["/uː/"], difficulty: 4, exampleSentence: "Turn on the computer.", status: "ACTIVE", sourceType: "FREE_API", syllables: ["com","pu","ter"], stressIndex: 1, wordStressType: "WORD_STRESS" },
+];
+
+// ============================================================================
+// TOPIC 4 - NHÓM 2: Weak Forms (CĐ4) — Mode A: choose-weak / Mode B: đọc câu
+// ============================================================================
+
+export const SENTENCES_T4_G02_WEAK: SentenceItemData[] = [
+  { sentence: "I'm going to the shop.", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["to","the"], targetPhonemes: ["/ə/"], difficulty: 5, ipa: "/aɪm ˈɡoʊɪŋ tə ðə ˈʃɑp/", translation: "Tôi đang đi tới cửa hàng.", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["to","the"], acceptedAnswers: ["I'm going to the shop", "I am going to the shop"], reviewNote: "to→/tə/, the→/ðə/ weak; Mode B accept I'm/I am" },
+  { sentence: "What do you want?", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["do"], targetPhonemes: ["/ə/"], difficulty: 4, ipa: "/wʌt də ju ˈwɑnt/", translation: "Bạn muốn gì?", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["do"], reviewNote: "do→/də/ weak" },
+  { sentence: "Can I have a coffee?", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["a"], targetPhonemes: ["/ə/"], difficulty: 4, ipa: "/kən aɪ hæv ə ˈkɑfi/", translation: "Tôi có thể lấy một cốc cà phê không?", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["a"], reviewNote: "a→/ə/ weak" },
+  { sentence: "She's at the bus stop.", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["at","the"], targetPhonemes: ["/ə/"], difficulty: 5, ipa: "/ʃiz ət ðə ˈbʌs stɑp/", translation: "Cô ấy ở trạm xe buýt.", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["at","the"], acceptedAnswers: ["She's at the bus stop", "She is at the bus stop"], reviewNote: "at→/ət/, the→/ðə/ weak; Mode B accept She's/She is" },
+  { sentence: "A cup of tea, please.", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["a","of"], targetPhonemes: ["/ə/"], difficulty: 5, ipa: "/ə ˈkʌp əv ˈti pliz/", translation: "Một tách trà, làm ơn.", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["a","of"], reviewNote: "a→/ə/, of→/əv/ weak" },
+  { sentence: "It's for you and me.", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["for","and"], targetPhonemes: ["/ə/"], difficulty: 5, ipa: "/ɪts fər ju ən ˈmi/", translation: "Nó dành cho bạn và tôi.", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["for","and"], acceptedAnswers: ["It's for you and me", "It is for you and me"], reviewNote: "for→/fər/, and→/ən/ weak; Mode B accept It's/It is" },
+  { sentence: "There is a book on the table.", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["is","a","the"], targetPhonemes: ["/ə/"], difficulty: 6, ipa: "/ðɛr ɪz ə ˈbʊk ən ðə ˈtebəl/", translation: "Có một quyển sách trên bàn.", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["is","a","the"], acceptedAnswers: ["There is a book on the table", "There's a book on the table"], reviewNote: "is/a/the weak; Mode B accept There is/There's" },
+  { sentence: "What are you doing?", soundGroupId: "map-t4-g02-weak-forms", targetWords: ["are"], targetPhonemes: ["/ə/"], difficulty: 5, ipa: "/wʌt ər ju ˈduɪŋ/", translation: "Bạn đang làm gì?", status: "ACTIVE", sourceType: "MANUAL", weakWords: ["are"], reviewNote: "are→/ər/ weak" },
+];
+
+// ============================================================================
+// TOPIC 4 - NHÓM 3: Linking (CĐ4) — Mode A: choose-linking / Mode B: đọc câu
+// ============================================================================
+
+export const SENTENCES_T4_G03_LINKING: SentenceItemData[] = [
+  { sentence: "Turn off the light.", soundGroupId: "map-t4-g03-linking", targetWords: ["Turn","off"], targetPhonemes: [], difficulty: 5, ipa: "/ˈtɜrn ˈɔf ðə ˈlaɪt/", translation: "Tắt đèn.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Turn","off"]], reviewNote: "C+V linking: /n/+/ɔ/ → /tɜrnˈɔf/" },
+  { sentence: "Pick it up.", soundGroupId: "map-t4-g03-linking", targetWords: ["Pick","it","up"], targetPhonemes: [], difficulty: 5, ipa: "/ˈpɪk ɪt ˈʌp/", translation: "Nhấc nó lên.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Pick","it"],["it","up"]], reviewNote: "/k/+/ɪ/, /t/+/ʌ/ linking" },
+  { sentence: "Look at this.", soundGroupId: "map-t4-g03-linking", targetWords: ["Look","at"], targetPhonemes: [], difficulty: 4, ipa: "/ˈlʊk ət ˈðɪs/", translation: "Nhìn cái này.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Look","at"]], reviewNote: "/k/+/ə/ linking" },
+  { sentence: "Stop it now.", soundGroupId: "map-t4-g03-linking", targetWords: ["Stop","it"], targetPhonemes: [], difficulty: 4, ipa: "/ˈstɑp ɪt ˈnaʊ/", translation: "Dừng lại ngay.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Stop","it"]], reviewNote: "/p/+/ɪ/ linking" },
+  { sentence: "Come in and sit down.", soundGroupId: "map-t4-g03-linking", targetWords: ["Come","in","and"], targetPhonemes: [], difficulty: 6, ipa: "/ˈkʌm ɪn ən ˈsɪt ˈdaʊn/", translation: "Vào và ngồi xuống.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Come","in"],["in","and"]], reviewNote: "/m/+/ɪ/, /n/+/ə/ linking" },
+  { sentence: "Hold on a second.", soundGroupId: "map-t4-g03-linking", targetWords: ["Hold","on"], targetPhonemes: [], difficulty: 5, ipa: "/ˈhoʊld ˈɑn ə ˈsɛkənd/", translation: "Đợi một chút.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Hold","on"]], reviewNote: "/d/+/ɑ/ linking" },
+  { sentence: "Take an apple.", soundGroupId: "map-t4-g03-linking", targetWords: ["Take","an","apple"], targetPhonemes: [], difficulty: 5, ipa: "/ˈteɪk ən ˈæpəl/", translation: "Lấy một quả táo.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Take","an"],["an","apple"]], reviewNote: "/k/+/ə/, /n/+/æ/ linking" },
+  { sentence: "Wash up before dinner.", soundGroupId: "map-t4-g03-linking", targetWords: ["Wash","up"], targetPhonemes: [], difficulty: 6, ipa: "/ˈwɑʃ ˈʌp bɪˈfɔr ˈdɪnər/", translation: "Rửa tay trước bữa tối.", status: "ACTIVE", sourceType: "MANUAL", linkingPairs: [["Wash","up"]], reviewNote: "/ʃ/+/ʌ/ linking" },
+];
+
+// ============================================================================
+// TOPIC 4 - NHÓM 4: Assimilation & Elision (CĐ4) — Mode A: choose-assimilation / Mode B: đọc câu
+// ============================================================================
+
+export const SENTENCES_T4_G04_ASSIM: SentenceItemData[] = [
+  { sentence: "Did you see it?", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Did","you"], targetPhonemes: [], difficulty: 6, ipa: "/dɪdʒu si ɪt/", translation: "Bạn có thấy nó không?", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "dj→dʒ", assimOriginal: "did you", assimResult: "didʒu", reviewNote: "/d/+/j/→/dʒ/: did you → didja" },
+  { sentence: "Nice to meet you.", soundGroupId: "map-t4-g04-assimilation", targetWords: ["meet","you"], targetPhonemes: [], difficulty: 6, ipa: "/naɪs tə mitʃu/", translation: "Vui được gặp bạn.", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "tj→tʃ", assimOriginal: "meet you", assimResult: "mitʃu", reviewNote: "/t/+/j/→/tʃ/: meet you → meetcha" },
+  { sentence: "Would you like tea?", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Would","you"], targetPhonemes: [], difficulty: 6, ipa: "/wʊdʒu laɪk ti/", translation: "Bạn có muốn trà không?", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "dj→dʒ", assimOriginal: "would you", assimResult: "wʊdʒu", reviewNote: "/d/+/j/→/dʒ/: would you → wouldja" },
+  { sentence: "I got your back.", soundGroupId: "map-t4-g04-assimilation", targetWords: ["got","your"], targetPhonemes: [], difficulty: 6, ipa: "/aɪ ɡɑtʃər bæk/", translation: "Tôi ủng hộ bạn.", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "tj→tʃ", assimOriginal: "got your", assimResult: "ɡɑtʃər", reviewNote: "/t/+/j/→/tʃ/: got your → gotcha" },
+  { sentence: "Next day, we leave.", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Next","day"], targetPhonemes: [], difficulty: 7, ipa: "/nɛks deɪ wi liv/", translation: "Hôm sau, chúng tôi rời đi.", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "elision-t", assimOriginal: "next day", assimResult: "nɛks deɪ", reviewNote: "Elision: drop /t/ in 'next' before /d/" },
+  { sentence: "Just you and me.", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Just","you"], targetPhonemes: [], difficulty: 6, ipa: "/dʒʌs tʃu ən mi/", translation: "Chỉ bạn và tôi.", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "tj→tʃ", assimOriginal: "just you", assimResult: "dʒʌs tʃu", reviewNote: "/t/+/j/→/tʃ/ + elision overlap" },
+  { sentence: "Hand your coat over.", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Hand","your"], targetPhonemes: [], difficulty: 7, ipa: "/hændʒər koʊt oʊvər/", translation: "Đưa áo khoác lại đây.", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "dj→dʒ", assimOriginal: "hand your", assimResult: "hændʒər", reviewNote: "/d/+/j/→/dʒ/: hand your → handjer" },
+  { sentence: "Last chance, go!", soundGroupId: "map-t4-g04-assimilation", targetWords: ["Last","chance"], targetPhonemes: [], difficulty: 7, ipa: "/læs tʃæns ɡoʊ/", translation: "Cơ hội cuối, đi đi!", status: "ACTIVE", sourceType: "MANUAL", assimilationType: "elision-t", assimOriginal: "last chance", assimResult: "læs tʃæns", reviewNote: "Elision: drop /t/ in 'last' before /tʃ/" },
+];
+
 // EXPORTS - Tổng hợp theo sound group
 // ============================================================================
 
@@ -1546,6 +1617,26 @@ export const LESSON_CONTENT_BY_SOUND_GROUP = {
     words: WORDS_T2_G12_W_J,
     minimalPairs: MINIMAL_PAIRS_T2_G12,
     sentences: SENTENCES_T2_G12,
+  },
+  "map-t4-g01-word-stress": {
+    words: WORDS_T4_G01_WORD_STRESS,
+    minimalPairs: [],
+    sentences: [],
+  },
+  "map-t4-g02-weak-forms": {
+    words: [],
+    minimalPairs: [],
+    sentences: SENTENCES_T4_G02_WEAK,
+  },
+  "map-t4-g03-linking": {
+    words: [],
+    minimalPairs: [],
+    sentences: SENTENCES_T4_G03_LINKING,
+  },
+  "map-t4-g04-assimilation": {
+    words: [],
+    minimalPairs: [],
+    sentences: SENTENCES_T4_G04_ASSIM,
   },
 };
 

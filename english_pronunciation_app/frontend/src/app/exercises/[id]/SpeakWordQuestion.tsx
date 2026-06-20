@@ -61,12 +61,13 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
   const [showWord, setShowWord] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [speechUnsupported, setSpeechUnsupported] = useState(false);
+  const [micDenied, setMicDenied] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorder = useWaveformRecorder();
 
   useEffect(() => {
     setSpeechUnsupported(getSpeechCtor() === null);
-    setStatus("idle"); setTranscript(""); setRetryCount(0); setShowWord(false);
+    setStatus("idle"); setTranscript(""); setRetryCount(0); setShowWord(false); setMicDenied(false);
     recorder.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id]);
@@ -90,7 +91,15 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
     const recog = new Ctor();
     recog.continuous = false; recog.lang = "en-US"; recog.interimResults = false; recog.maxAlternatives = 1;
     recog.onresult = (e) => { setTranscript(e.results[0][0].transcript); checkAnswer(e.results[0][0].transcript); };
-    recog.onerror = () => setStatus("error");
+    recog.onerror = (e) => {
+      // Phân biệt error type: mic-denied vs no-speech vs other
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        setMicDenied(true);
+        setStatus("error");
+      } else {
+        setStatus("error");
+      }
+    };
     recog.onend = () => setStatus((cur) => (cur === "recording" ? "error" : cur));
     recognitionRef.current = recog;
     setStatus("recording"); setTranscript("");
@@ -178,8 +187,16 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
           <div className="space-y-4 text-center">
             <div className="text-5xl">😕</div>
             <div className="rounded-xl border-2 border-warning-300 bg-warning-50 p-4 text-warning-800">
-              <p className="font-bold">{speechUnsupported ? "Trình duyệt không hỗ trợ" : "Không nghe thấy giọng nói"}</p>
-              <p className="mt-1 text-sm">{speechUnsupported ? "Hãy dùng Chrome/Edge" : "Kiểm tra microphone và thử lại"}</p>
+              <p className="font-bold">
+                {speechUnsupported ? "Trình duyệt không hỗ trợ"
+                  : micDenied ? "🔒 Microphone bị chặn"
+                  : "Không nghe thấy giọng nói"}
+              </p>
+              <p className="mt-1 text-sm">
+                {speechUnsupported ? "Hãy dùng Chrome/Edge"
+                  : micDenied ? "Cấp quyền microphone trong browser: click icon 🔒 bên trái thanh địa chỉ → Site settings → Microphone → Allow, rồi reload trang"
+                  : "Kiểm tra microphone và thử lại — nói to, rõ, bằng tiếng Anh"}
+              </p>
             </div>
             <button type="button" onClick={startRecording}
               className="rounded-xl bg-primary-600 px-6 py-3 font-bold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300">

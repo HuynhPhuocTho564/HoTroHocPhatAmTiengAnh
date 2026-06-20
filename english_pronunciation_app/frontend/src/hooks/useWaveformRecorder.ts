@@ -86,10 +86,22 @@ export function useWaveformRecorder() {
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
+  // Clear sóng triệt để: cả canvas (wavesurfer.empty) VÀ buffer dataWindow của Record plugin.
+  // Chỉ empty() không đủ — plugin giữ dataWindow (private) qua các lần startMic, tick tiếp theo
+  // (10ms) đọc lại buffer cũ → vẽ lại sóng cũ. Phải reset dataWindow=null như startRecording() làm.
+  // dataWindow là private → cast qua unknown (pattern chuẩn TS) để truy cập an toàn.
+  const clearWaveform = useCallback(() => {
+    wavesurferRef.current?.empty();
+    const record = recordRef.current as unknown as { dataWindow: Float32Array | null } | null;
+    if (record) record.dataWindow = null;
+  }, []);
+
   const start = useCallback(async () => {
     const record = recordRef.current;
     if (!record) return;
     try {
+      // Clear sóng cũ triệt để trước khi bắt đầu thu mới (tránh sóng cũ chồng lên khi Thử lại)
+      clearWaveform();
       // startMic tự getUserMedia nội bộ + render scrolling waveform, trả MediaStream
       const stream = await record.startMic();
       startLevelMonitor(stream);
@@ -97,7 +109,7 @@ export function useWaveformRecorder() {
     } catch (error) {
       console.warn("mic access failed:", error);
     }
-  }, [startLevelMonitor]);
+  }, [startLevelMonitor, clearWaveform]);
 
   const stop = useCallback(() => {
     const record = recordRef.current;
@@ -116,10 +128,12 @@ export function useWaveformRecorder() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     void audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
+    // Clear sóng cũ triệt để (canvas + buffer plugin) để Thử lại không còn sóng cũ
+    clearWaveform();
     wavesurferRef.current?.setOptions({ waveColor: COLOR_NORMAL });
     setState("idle");
     setLevel("silence");
-  }, []);
+  }, [clearWaveform]);
 
   return { containerRef, state, level, start, stop, reset };
 }

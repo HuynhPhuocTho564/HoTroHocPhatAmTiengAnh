@@ -9,6 +9,9 @@ import {
   getBadgeProgressFromStats,
   getLeaderboardTargets,
   getNextLevelXp,
+  computeGemReward,
+  validateShopPurchase,
+  calculateNextStreak,
 } from "../gamification";
 
 test("first exercise attempt earns score-based XP and ranking score", () => {

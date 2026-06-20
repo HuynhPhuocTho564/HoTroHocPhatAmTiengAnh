@@ -15,6 +15,7 @@ export type ScoringQuestion = {
     id: string;
     name: string;
   };
+  acceptedAnswers?: string[] | null; // v2 Mode B: multi-answer (g02 weak-forms contraction)
   options: Array<{
     id: string;
     content: string;
@@ -106,7 +107,12 @@ function scoreMultipleChoice(question: ScoringQuestion, answer: SubmitAnswerInpu
 
 function scoreVoice(question: ScoringQuestion, answer: SubmitAnswerInput): QuestionScoreResult {
   const transcript = answer.transcript ?? "";
-  const accuracyScore = calculateWordOverlapAccuracy(question.answer, transcript);
+  // v2 Mode B multi-answer: max overlap across [answer, ...acceptedAnswers]
+  const candidates =
+    question.acceptedAnswers && question.acceptedAnswers.length > 0
+      ? [question.answer, ...question.acceptedAnswers]
+      : [question.answer];
+  const accuracyScore = Math.max(...candidates.map((c) => calculateWordOverlapAccuracy(c, transcript)));
   const isCorrect = accuracyScore >= 80;
   const score = Math.round((question.score * accuracyScore) / 100);
 
@@ -124,10 +130,72 @@ function scoreVoice(question: ScoringQuestion, answer: SubmitAnswerInput): Quest
   };
 }
 
+// === SP4 Mode A: CĐ4 scoring helpers ===
+
+// DRY: build QuestionScoreResult 7 field (verify type scoring.ts:24-35)
+function buildResult(
+  question: ScoringQuestion,
+  answer: SubmitAnswerInput,
+  isCorrect: boolean,
+  feedback: string,
+): QuestionScoreResult {
+  return {
+    questionId: question.id,
+    isCorrect,
+    score: isCorrect ? question.score : 0,
+    maxScore: question.score,
+    accuracyScore: isCorrect ? 100 : 0,
+    feedback,
+    selectedOptionId: answer.selectedOptionId ?? null,
+    transcript: answer.transcript ?? null,
+    audioUrl: answer.audioUrl ?? null,
+    timeSpent: answer.timeSpent ?? null,
+  };
+}
+
+// qtype-4-tap-stress: answer = String(stressIndex); chọn option theo index
+function scoreTapStress(question: ScoringQuestion, answer: SubmitAnswerInput): QuestionScoreResult {
+  const idx = question.options.findIndex((o) => o.id === answer.selectedOptionId);
+  const isCorrect = idx >= 0 && idx === Number(question.answer);
+  const correctSyllable = question.options[Number(question.answer)]?.content ?? "?";
+  return buildResult(
+    question,
+    answer,
+    isCorrect,
+    isCorrect ? "Chọn đúng âm tiết nhấn" : `Đáp án: ${correctSyllable} (âm tiết ${Number(question.answer) + 1})`,
+  );
+}
+
+// qtype-5/6 (choose-weak/choose-linking): answer = "to,the" comma-join; selectedText = join
+function scoreMultiSelect(question: ScoringQuestion, answer: SubmitAnswerInput): QuestionScoreResult {
+  const expected = new Set(question.answer.split(",").map(normalizeAnswerText).filter(Boolean));
+  const selected = new Set((answer.selectedText ?? "").split(",").map(normalizeAnswerText).filter(Boolean));
+  const isCorrect =
+    expected.size === selected.size && [...expected].every((x) => selected.has(x));
+  return buildResult(question, answer, isCorrect, isCorrect ? "Chọn đúng" : `Đáp án: ${question.answer}`);
+}
+
+// qtype-7 (choose-assimilation): answer = "didʒu" IPA; chọn 1 option — exact (không normalize, giữ ʒ)
+function scoreSingleSelect(question: ScoringQuestion, answer: SubmitAnswerInput): QuestionScoreResult {
+  const selectedText =
+    question.options.find((o) => o.id === answer.selectedOptionId)?.content ?? answer.selectedText ?? "";
+  const isCorrect = selectedText === question.answer;
+  return buildResult(
+    question,
+    answer,
+    isCorrect,
+    isCorrect ? "Chọn đúng phát âm biến âm" : `Đáp án: ${question.answer}`,
+  );
+}
+
 export function scoreQuestion(question: ScoringQuestion, answer: SubmitAnswerInput): QuestionScoreResult {
   if (question.type.id === "qtype-1-mc") {
     return scoreMultipleChoice(question, answer);
   }
+  if (question.type.id === "qtype-4-tap-stress") return scoreTapStress(question, answer);
+  if (question.type.id === "qtype-5-choose-weak") return scoreMultiSelect(question, answer);
+  if (question.type.id === "qtype-6-choose-linking") return scoreMultiSelect(question, answer);
+  if (question.type.id === "qtype-7-choose-assimilation") return scoreSingleSelect(question, answer);
 
   return scoreVoice(question, answer);
 }

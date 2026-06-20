@@ -121,9 +121,14 @@ export default function SpeakMinimalPairsQuestion({ question, onNext }: SpeakMin
       setStatuses((cur) => cur.map((item, i) => (i === index ? "recorded" : item)));
       recorder.stop();
     };
-    recog.onerror = () => {
+    recog.onerror = (e) => {
       setStatuses((cur) => cur.map((item, i) => (i === index ? "idle" : item)));
-      setErrorMessage("Không nghe thấy giọng nói. Thử lại.");
+      const denied = e.error === "not-allowed" || e.error === "service-not-allowed";
+      setErrorMessage(
+        denied
+          ? "🔒 Microphone bị chặn. Cấp quyền: click icon 🔒 bên trái thanh địa chỉ → Site settings → Microphone → Allow, rồi reload trang."
+          : "Không nghe thấy giọng nói. Nói to, rõ, bằng tiếng Anh. Thử lại.",
+      );
       recorder.reset();
     };
     recog.onend = () => setStatuses((cur) => cur.map((item, i) => (i === index && item === "recording" ? "idle" : item)));

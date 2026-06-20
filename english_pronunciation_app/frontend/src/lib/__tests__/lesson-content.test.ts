@@ -103,3 +103,60 @@ test("pilot nhóm map-t1-g01-i-ih: mỗi sentence có ipa RP (bắt đầu /)", 
     assert.ok(sent.ipa!.startsWith("/"), `ipa "${sent.ipa}" phải bắt đầu bằng /`);
   }
 });
+
+// ===== SP3d Batch 1: CĐ4 (g01 Word Stress + g02 Weak Forms) =====
+
+test("Word Stress (g01): 8 từ, mỗi từ có syllables >=2 + stressIndex + wordStressType WORD_STRESS + targetPhonemes không rỗng", () => {
+  const content = getContentBySoundGroup("map-t4-g01-word-stress");
+  assert.ok(content, "g01 phải có content");
+  assert.ok(content!.words.length >= 8, `g01 words >= 8 (hiện ${content!.words.length})`);
+  for (const w of content!.words) {
+    assert.ok(w.syllables && w.syllables.length >= 2, `${w.word} thiếu syllables >= 2`);
+    assert.ok(typeof w.stressIndex === "number" && w.stressIndex >= 0, `${w.word} thiếu stressIndex hợp lệ`);
+    assert.equal(w.wordStressType, "WORD_STRESS", `${w.word} wordStressType sai`);
+    assert.ok(w.targetPhonemes.length > 0, `${w.word} thiếu targetPhonemes (bắt buộc cho phonemeId)`);
+    assert.ok(w.ipa.startsWith("/"), `${w.word} ipa phải bắt đầu /`);
+  }
+});
+
+test("Weak Forms (g02): 8 câu, mỗi câu có ipa bắt đầu / + targetPhonemes chứa /ə/", () => {
+  const content = getContentBySoundGroup("map-t4-g02-weak-forms");
+  assert.ok(content, "g02 phải có content");
+  assert.ok(content!.sentences.length >= 8, `g02 sentences >= 8 (hiện ${content!.sentences.length})`);
+  for (const s of content!.sentences) {
+    assert.ok(s.ipa, `g02 sentence "${s.sentence}" thiếu ipa`);
+    assert.ok(s.ipa!.startsWith("/"), `g02 ipa "${s.ipa}" phải bắt đầu /`);
+    assert.ok(s.targetPhonemes.includes("/ə/"), `g02 sentence "${s.sentence}" thiếu /ə/`);
+  }
+});
+
+test("tổng số nhóm có content >= 26 (10 CD1 + 2 legacy CD3 + 12 CD2 + 2 CD4 Batch 1)", () => {
+  assert.ok(Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length >= 26, `Ít nhất 26 nhóm content (hiện ${Object.keys(LESSON_CONTENT_BY_SOUND_GROUP).length})`);
+});
+
+// ===== SP3d Batch 2: CĐ4 (g03 Linking + g04 Assimilation + all-4 verify) =====
+
+const CD4_GROUPS = [
+  "map-t4-g01-word-stress",
+  "map-t4-g02-weak-forms",
+  "map-t4-g03-linking",
+  "map-t4-g04-assimilation",
+];
+
+test("4 nhóm CĐ4 có trong LESSON_CONTENT_BY_SOUND_GROUP", () => {
+  for (const id of CD4_GROUPS) {
+    assert.ok(LESSON_CONTENT_BY_SOUND_GROUP[id as keyof typeof LESSON_CONTENT_BY_SOUND_GROUP], `Thiếu nhóm ${id}`);
+  }
+});
+
+test("Linking + Assimilation (g03/g04): mỗi nhóm 8 câu, có ipa bắt đầu /", () => {
+  for (const id of ["map-t4-g03-linking", "map-t4-g04-assimilation"]) {
+    const content = getContentBySoundGroup(id);
+    assert.ok(content, `${id} phải có content`);
+    assert.ok(content!.sentences.length >= 8, `${id} sentences >= 8 (hiện ${content!.sentences.length})`);
+    for (const s of content!.sentences) {
+      assert.ok(s.ipa, `${id} sentence "${s.sentence}" thiếu ipa`);
+      assert.ok(s.ipa!.startsWith("/"), `${id} ipa "${s.ipa}" phải bắt đầu /`);
+    }
+  }
+});

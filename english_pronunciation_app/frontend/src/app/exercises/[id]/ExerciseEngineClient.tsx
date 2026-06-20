@@ -12,6 +12,10 @@ import ExerciseSummaryScreen from "./ExerciseSummaryScreen";
 import SpeakWordQuestion from "./SpeakWordQuestion";
 import SpeakSentenceQuestion from "./SpeakSentenceQuestion";
 import SpeakMinimalPairsQuestion from "./SpeakMinimalPairsQuestion";
+import TapStressQuestion from "./TapStressQuestion";
+import ChooseWeakQuestion from "./ChooseWeakQuestion";
+import ChooseLinkingQuestion from "./ChooseLinkingQuestion";
+import ChooseAssimilationQuestion from "./ChooseAssimilationQuestion";
 
 type ExerciseQuestionOption = {
   id: string;
@@ -25,6 +29,7 @@ export type ExerciseQuestion = {
   type: string;
   answer: string;
   score: number;
+  acceptedAnswers?: string[] | null; // v2 Mode B: multi-answer (g02 weak-forms contraction)
   options: ExerciseQuestionOption[];
 };
 
@@ -112,6 +117,12 @@ export function parseWordPrompt(content: string): WordPrompt {
       audioUrl: parsed.audioUrl ? String(parsed.audioUrl) : undefined,
       hint: parsed.hint ? String(parsed.hint) : undefined,
       options: Array.isArray(parsed.options) ? parsed.options : undefined,
+      // v2 listen_choose 3-stage (phoneme identification) — phải gán để engine render đúng stage
+      answerType: parsed.answerType,
+      stage: parsed.stage,
+      targetPhoneme: parsed.targetPhoneme ? String(parsed.targetPhoneme) : undefined,
+      contrastPhonemes: Array.isArray(parsed.contrastPhonemes) ? parsed.contrastPhonemes.map(String) : undefined,
+      skeleton: parsed.skeleton === null ? null : parsed.skeleton ? String(parsed.skeleton) : undefined,
     };
   } catch {
     return {
@@ -402,14 +413,19 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
     ]);
   };
 
-  const handleAnswerListen = (correct: boolean, answerOpt: string, selectedOptionId?: string | null) => {
+  const handleAnswerListen = (
+    correct: boolean,
+    answerOpt: string,
+    selectedOptionId?: string | null,
+    selectedTextOverride?: string,
+  ) => {
     setIsAnswered(true);
     setIsCorrect(correct);
     setSelectedAnswer(answerOpt);
     recordAnswer({
       questionId: currentQuestion.id,
       selectedOptionId: selectedOptionId ?? null,
-      selectedText: answerOpt,
+      selectedText: selectedTextOverride ?? answerOpt, // multi-select truyền join
       transcript: null,
       timeSpent: null,
     });
@@ -571,6 +587,46 @@ export default function ExerciseEngineClient({ exercise }: { exercise: ExerciseD
 
         {currentQuestion.type === "qtype-3-minimal-pairs" && (
           <SpeakMinimalPairsQuestion key={currentQuestion.id} question={currentQuestion} onNext={handleNextVoice} />
+        )}
+
+        {currentQuestion.type === "qtype-4-tap-stress" && (
+          <TapStressQuestion
+            key={currentQuestion.id}
+            question={currentQuestion}
+            onAnswer={handleAnswerListen}
+            isAnswered={isAnswered}
+            selectedAnswer={selectedAnswer}
+          />
+        )}
+
+        {currentQuestion.type === "qtype-5-choose-weak" && (
+          <ChooseWeakQuestion
+            key={currentQuestion.id}
+            question={currentQuestion}
+            onAnswer={handleAnswerListen}
+            isAnswered={isAnswered}
+            selectedAnswer={selectedAnswer}
+          />
+        )}
+
+        {currentQuestion.type === "qtype-6-choose-linking" && (
+          <ChooseLinkingQuestion
+            key={currentQuestion.id}
+            question={currentQuestion}
+            onAnswer={handleAnswerListen}
+            isAnswered={isAnswered}
+            selectedAnswer={selectedAnswer}
+          />
+        )}
+
+        {currentQuestion.type === "qtype-7-choose-assimilation" && (
+          <ChooseAssimilationQuestion
+            key={currentQuestion.id}
+            question={currentQuestion}
+            onAnswer={handleAnswerListen}
+            isAnswered={isAnswered}
+            selectedAnswer={selectedAnswer}
+          />
         )}
       </main>
 
