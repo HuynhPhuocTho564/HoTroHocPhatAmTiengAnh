@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
   CHECKIN_REWARD,
+  computeStreakMilestoneGems,
   calculateLevelFromXp,
   calculateNextStreak,
   checkAndAwardBadges,
@@ -119,6 +120,10 @@ export async function POST(request: NextRequest) {
       const nextXp = user.xp + CHECKIN_REWARD.xp;
       const nextLevel = Math.max(user.level, calculateLevelFromXp(nextXp));
 
+      // Task 4.1: gems từ check-in + streak milestone bonus
+      const streakMilestoneGems = computeStreakMilestoneGems(streakStatus.streak, user.streakCount);
+      const totalGemsEarned = CHECKIN_REWARD.gems + streakMilestoneGems;
+
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -128,6 +133,7 @@ export async function POST(request: NextRequest) {
           streakCount: streakStatus.streak,
           longestStreak: Math.max(streakStatus.streak, user.longestStreak),
           totalCheckIns: { increment: 1 },
+          gems: { increment: totalGemsEarned },
           ...(streakStatus.usedFreeze ? { streakFreezes: { decrement: 1 } } : {}),
         },
         select: {
@@ -137,6 +143,7 @@ export async function POST(request: NextRequest) {
           longestStreak: true,
           totalCheckIns: true,
           lastCheckInDate: true,
+          gems: true,
         },
       });
 
@@ -186,6 +193,8 @@ export async function POST(request: NextRequest) {
         updatedUser,
         dailyActivity,
         badgesAwarded,
+        gemsEarned: totalGemsEarned,
+        streakMilestoneGems,
       };
     });
 
@@ -196,10 +205,13 @@ export async function POST(request: NextRequest) {
       totalCheckIns: result.updatedUser.totalCheckIns,
       lastCheckInDate: result.updatedUser.lastCheckInDate,
       reward: CHECKIN_REWARD,
+      gemsEarned: result.gemsEarned,
+      streakMilestoneGems: result.streakMilestoneGems,
       progress: {
         currentXp: result.updatedUser.xp,
         level: result.updatedUser.level,
       },
+      gems: result.updatedUser.gems,
       dailyActivity: {
         date: formatLocalDate(today),
         xpEarned: result.dailyActivity.xpEarned,

@@ -144,8 +144,10 @@ export default function ExerciseSummaryScreen({
 
         {submitStatus === "success" && (
           <div className="space-y-4">
-            {/* 4 card grid: XP / Điểm hạng / Streak / Badges (Task 3.1) */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {/* Reward grid: XP / Điểm hạng / Gems / Streak / Badges
+                Task 3.1 (điểm hạng) + Task 4.3 (gems visibility).
+                Responsive: 2 cột mobile → 5 cột desktop (sm). */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               {/* XP */}
               <div className="rounded-lg bg-primary-50 p-4 text-primary-700">
                 <p className="text-sm font-semibold">⭐ XP</p>
@@ -162,6 +164,14 @@ export default function ExerciseSummaryScreen({
                   </p>
                 )}
               </div>
+
+              {/* Gems 💎 — Task 4.3 (purple = currency palette, chỉ hiện nếu >0) */}
+              {submitResult.rewards.gemsEarned > 0 && (
+                <div className="rounded-lg bg-purple-50 p-4 text-purple-700">
+                  <p className="text-sm font-semibold">💎 Gems</p>
+                  <p className="text-2xl font-black">+{submitResult.rewards.gemsEarned}</p>
+                </div>
+              )}
 
               {/* Streak 🔥 — ẩn card nếu count === 0 */}
               {submitResult.streak.count > 0 ? (

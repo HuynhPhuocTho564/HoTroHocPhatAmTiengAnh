@@ -60,6 +60,7 @@ const DAILY_BONUS_TABLE = [
 export const CHECKIN_REWARD = {
   xp: 10,
   rankingScore: 2,
+  gems: 3, // Task 4.1: check-in cũng cộng gems để mở rộng earning
 };
 
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
@@ -532,8 +533,37 @@ export async function checkAndAwardBadges(
 
 // === SP7: Gem + Shop + Streak Freeze ===
 
+/**
+ * Gem earning table (Task 4.1) — mở rộng nguồn gems để economy có ý nghĩa.
+ * Trước: chỉ EXCELLENT exercise earn 5 gems → quá chậm.
+ * Sau: GOOD exercise + check-in + streak milestone đều earn gems.
+ */
+export const GEM_REWARDS = {
+  excellent_exercise: 5, // Score >= 90
+  good_exercise: 2, // Score >= 70 (MỚI)
+  daily_checkin: 3, // Check-in mỗi ngày (MỚI)
+  streak_7_bonus: 15, // Streak 7 ngày (MỚI)
+  streak_14_bonus: 30, // Streak 14 ngày (MỚI)
+  daily_quest_complete: 10, // Quest hoàn thành (đã có)
+  weekly_challenge: 25, // Weekly challenge (đã có)
+} as const;
+
 export function computeGemReward(rating: ExerciseRating): number {
-  return rating === "EXCELLENT" ? 5 : 0;
+  if (rating === "EXCELLENT") return GEM_REWARDS.excellent_exercise;
+  if (rating === "GOOD") return GEM_REWARDS.good_exercise;
+  return 0;
+}
+
+/**
+ * Tính gem bonus cho streak milestone (Task 4.1).
+ * Trả 0 nếu chưa đạt milestone, trả gems nếu vừa đạt mốc 7 hoặc 14.
+ * @param newStreak — streak sau khi check-in
+ * @param previousStreak — streak trước đó (để biết "vừa đạt" hay "đã đạt từ trước")
+ */
+export function computeStreakMilestoneGems(newStreak: number, previousStreak: number): number {
+  if (newStreak === 7 && previousStreak < 7) return GEM_REWARDS.streak_7_bonus;
+  if (newStreak === 14 && previousStreak < 14) return GEM_REWARDS.streak_14_bonus;
+  return 0;
 }
 
 export function validateShopPurchase(
@@ -544,10 +574,34 @@ export function validateShopPurchase(
   return { ok: true };
 }
 
-export const SHOP_ITEMS = [
-  { id: "ipa_reveal", name: "Kính Lúp IPA", cost: 50, desc: "Xem IPA câu khó trong Thực chiến" },
-  { id: "slow_audio", name: "Loa Ma Thuật", cost: 20, desc: "Nghe giọng bản xứ chậm x0.5" },
-  { id: "streak_freeze", name: "Bùa Đóng Băng", cost: 10, desc: "Giữ chuỗi ngày khi lỡ 1 ngày" },
+// Task 4.2: Shop categories + mở rộng từ 3 → 10 items
+export type ShopCategory = "power_up" | "cosmetic" | "protection";
+
+export type ShopItem = {
+  id: string;
+  name: string;
+  cost: number;
+  category: ShopCategory;
+  desc: string;
+  icon: string;
+};
+
+export const SHOP_ITEMS: readonly ShopItem[] = [
+  // Power-ups (hỗ trợ luyện tập)
+  { id: "ipa_reveal", name: "Kính Lúp IPA", cost: 50, category: "power_up", desc: "Xem IPA transcription cho câu khó trong Thực chiến", icon: "🔍" },
+  { id: "slow_audio", name: "Loa Ma Thuật", cost: 20, category: "power_up", desc: "Nghe audio chậm x0.5 trong 1 bài", icon: "🔊" },
+  { id: "xp_boost", name: "Sách Thần", cost: 40, category: "power_up", desc: "x1.5 XP trong 3 bài tiếp theo (sắp ra mắt)", icon: "📖" },
+  { id: "hint_token", name: "Gợi Ý Vàng", cost: 15, category: "power_up", desc: "Xem gợi ý 1 lần trong bài nghe (sắp ra mắt)", icon: "💡" },
+
+  // Protection (bảo vệ streak/safety)
+  { id: "streak_freeze", name: "Bùa Đóng Băng", cost: 10, category: "protection", desc: "Giữ chuỗi ngày khi lỡ 1 ngày", icon: "❄️" },
+  { id: "second_chance", name: "Cơ Hội Thứ Hai", cost: 30, category: "protection", desc: "Được làm lại 1 câu sai trong bài (sắp ra mắt)", icon: "🔄" },
+
+  // Cosmetic (avatar/profile)
+  { id: "frame_gold", name: "Khung Avatar Vàng", cost: 80, category: "cosmetic", desc: "Khung viền vàng cho avatar (sắp ra mắt)", icon: "🖼️" },
+  { id: "frame_fire", name: "Khung Avatar Lửa", cost: 100, category: "cosmetic", desc: "Khung viền lửa cho avatar (sắp ra mắt)", icon: "🔥" },
+  { id: "title_scholar", name: "Danh Hiệu: Học Giả", cost: 60, category: "cosmetic", desc: "Hiển thị danh hiệu dưới tên (sắp ra mắt)", icon: "🎓" },
+  { id: "title_champion", name: "Danh Hiệu: Quán Quân", cost: 120, category: "cosmetic", desc: "Danh hiệu đặc biệt cho top 10 (sắp ra mắt)", icon: "👑" },
 ] as const;
 
 export function calculateNextStreak(
