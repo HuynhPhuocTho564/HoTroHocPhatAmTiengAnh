@@ -144,12 +144,23 @@ export default function ExerciseSummaryScreen({
 
         {submitStatus === "success" && (
           <div className="space-y-4">
-            {/* 3 card grid: XP / Streak / Badges */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {/* 4 card grid: XP / Điểm hạng / Streak / Badges (Task 3.1) */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {/* XP */}
               <div className="rounded-lg bg-primary-50 p-4 text-primary-700">
                 <p className="text-sm font-semibold">⭐ XP</p>
                 <p className="text-2xl font-black">+{submitResult.rewards.totalXpEarned}</p>
+              </div>
+
+              {/* Điểm hạng 🏆 — Task 3.1 (Nielsen H1 Visibility, amber = competition energy) */}
+              <div className="rounded-lg bg-amber-50 p-4 text-amber-700">
+                <p className="text-sm font-semibold">🏆 Điểm hạng</p>
+                <p className="text-2xl font-black">+{submitResult.rewards.totalRankingDelta}</p>
+                {submitResult.rewards.dailyBonusRanking > 0 && (
+                  <p className="mt-1 text-xs font-bold">
+                    +{submitResult.rewards.dailyBonusRanking} bonus
+                  </p>
+                )}
               </div>
 
               {/* Streak 🔥 — ẩn card nếu count === 0 */}
@@ -179,6 +190,11 @@ export default function ExerciseSummaryScreen({
                 )}
               </div>
             </div>
+
+            {/* Context: giải thích ranking reset (Task 3.1) */}
+            <p className="text-sm font-semibold text-amber-600">
+              🏆 Điểm hạng xếp theo tuần/tháng — cạnh tranh trên bảng xếp hạng!
+            </p>
 
             {/* Progress bias — chỉ hiện nếu previousBestScore !== null */}
             {progressBias !== null && (

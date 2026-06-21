@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import RankTierBadge from "@/components/gamification/RankTierBadge";
+import PodiumCard from "@/components/gamification/PodiumCard";
 import { SkeletonLeaderboardList } from "@/components/ui/Skeleton";
 
 type LeaderboardType = "tuan" | "thang" | "all";
@@ -44,6 +46,7 @@ type LeaderboardData = {
     rank: number;
     score: number;
   } | null;
+  totalPlayers: number; // Task 3.2.3: để tính rank tier (percentile)
 };
 
 const filters: Array<{ id: LeaderboardType; name: string }> = [
@@ -131,9 +134,9 @@ export default function LeaderboardPage() {
               <div>
                 <div className="font-bold text-neutral-900 flex items-center gap-2">
                   Thứ hạng của bạn
-                  <Badge variant="info" size="sm">
-                    {data.type}
-                  </Badge>
+                  {data.totalPlayers > 0 && (
+                    <RankTierBadge rank={data.currentUser.rank} totalPlayers={data.totalPlayers} size="sm" />
+                  )}
                 </div>
                 <div className="text-sm text-neutral-600">
                   {data.type === "all" ? "Mọi thời đại" : `Kỳ ${data.period}`}
@@ -150,11 +153,27 @@ export default function LeaderboardPage() {
         {isLoading && <SkeletonLeaderboardList count={5} />}
         {error && <Card className="border-error-200 text-error-600">{error}</Card>}
 
-        {!isLoading && !error && (
-          <Card padding="none">
-            {data && data.items.length > 0 ? (
+        {!isLoading && !error && data && data.items.length > 0 && (
+          <>
+            {/* Task 3.3: Podium top-3 — chỉ hiện khi có đủ 3 người, ẩn trên mobile <480px */}
+            {data.items.length >= 3 && (
+              <div className="mb-8 hidden flex-wrap items-end justify-center gap-4 sm:flex">
+                {/* #2 — Silver (trái, ngắn hơn) */}
+                <PodiumCard user={data.items[1]} rank={2} height="h-36" />
+                {/* #1 — Gold (giữa, cao nhất + crown) */}
+                <PodiumCard user={data.items[0]} rank={1} height="h-48" isChampion />
+                {/* #3 — Bronze (phải, ngắn nhất) */}
+                <PodiumCard user={data.items[2]} rank={3} height="h-28" />
+              </div>
+            )}
+
+            {/* Rest list — từ rank 4 trở đi (top 3 đã có podium trên desktop) */}
+            <Card padding="none">
               <div className="divide-y divide-neutral-100">
-                {data.items.map((user) => (
+                {/* Mobile: hiện tất cả. Desktop: chỉ từ rank 4 */}
+                {data.items
+                  .filter((user) => data.items.length < 3 || user.rank > 3)
+                  .map((user) => (
                   <div
                     key={`${user.rank}-${user.userId}`}
                     className={`flex items-center justify-between p-4 hover:bg-neutral-50 transition-colors ${
@@ -178,7 +197,12 @@ export default function LeaderboardPage() {
                         className="w-12 h-12 rounded-full border-2 border-white shadow-sm bg-white"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-neutral-900 truncate">{user.username}</div>
+                        <div className="font-bold text-neutral-900 truncate flex items-center gap-2">
+                          {user.username}
+                          {data && data.totalPlayers > 0 && (
+                            <RankTierBadge rank={user.rank} totalPlayers={data.totalPlayers} size="sm" />
+                          )}
+                        </div>
                         <div className="text-sm text-neutral-600 flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span>Cấp {user.level}</span>
                           <span>{user.completedExercises} bài</span>
@@ -206,11 +230,21 @@ export default function LeaderboardPage() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="p-6 text-neutral-600">
-                Chưa có dữ liệu xếp hạng cho kỳ này. Hãy làm bài hoặc điểm danh để tạo điểm hạng đầu tiên.
-              </div>
-            )}
+
+              {/* Empty state: không có item nào */}
+              {data.items.length === 0 && (
+                <div className="p-6 text-neutral-600">
+                  Chưa có dữ liệu xếp hạng cho kỳ này. Hãy làm bài hoặc điểm danh để tạo điểm hạng đầu tiên.
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+
+        {/* Empty state khi không loading, không error, nhưng data null */}
+        {!isLoading && !error && !data && (
+          <Card className="p-6 text-neutral-600">
+            Chưa có dữ liệu xếp hạng cho kỳ này. Hãy làm bài hoặc điểm danh để tạo điểm hạng đầu tiên.
           </Card>
         )}
 

@@ -7,6 +7,8 @@ import SpinWheel from "@/components/gamification/SpinWheel";
 import DashboardWidgetTabs from "@/components/gamification/DashboardWidgetTabs";
 import SuggestedExercise from "@/components/dashboard/SuggestedExercise";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
+import RankChangeNotification from "@/components/gamification/RankChangeNotification";
+import SeasonEndOverlay from "@/components/gamification/SeasonEndOverlay";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import { auth } from "@/lib/auth";
@@ -128,6 +130,8 @@ export default async function DashboardPage() {
 
   return (
     <OnboardingGate>
+      <RankChangeNotification />
+      <SeasonEndOverlay />
       <div className="min-h-screen bg-white">
         <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-7xl flex-col lg:flex-row">
         <div className="flex-1 border-neutral-200 px-4 py-10 sm:px-6 lg:border-r lg:px-12">

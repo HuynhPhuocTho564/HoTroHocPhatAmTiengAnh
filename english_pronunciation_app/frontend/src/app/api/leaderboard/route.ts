@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // All-time leaderboard: rank users by total XP
     if (type === "all") {
-      const [rows] = await Promise.all([
+      const [rows, totalPlayers] = await Promise.all([
         prisma.user.findMany({
           where: { status: "ACTIVE" },
           orderBy: [{ xp: "desc" }, { createdAt: "asc" }],
@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
             streakCount: true,
           },
         }),
+        // Task 3.2.3: total players để client tính rank tier (percentile)
+        prisma.user.count({ where: { status: "ACTIVE" } }),
       ]);
 
       const items = rows.map((row, index) => ({
@@ -97,13 +99,13 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return success({ type: "all" as const, period: "all", items, currentUser });
+      return success({ type: "all" as const, period: "all", items, currentUser, totalPlayers });
     }
 
     // Period-based leaderboard (tuan/thang)
     const targetPeriod = period || getLeaderboardPeriod(type, new Date());
 
-    const [periodSession, rows] = await Promise.all([
+    const [periodSession, rows, totalPlayers] = await Promise.all([
       auth(),
       prisma.leaderboard.findMany({
         where: {
@@ -138,6 +140,8 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
+      // Task 3.2.3: total players trong kỳ để client tính rank tier
+      prisma.leaderboard.count({ where: { type, period: targetPeriod } }),
     ]);
 
     const items = rows.map((row, index) => ({
@@ -196,6 +200,7 @@ export async function GET(request: NextRequest) {
       period: targetPeriod,
       items,
       currentUser,
+      totalPlayers,
     });
   } catch (error) {
     console.error("Get leaderboard error:", error);
