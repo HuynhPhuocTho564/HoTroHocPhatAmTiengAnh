@@ -6,6 +6,7 @@ import WeeklyChallengeCard from "@/components/gamification/WeeklyChallengeCard";
 import SpinWheel from "@/components/gamification/SpinWheel";
 import DashboardWidgetTabs from "@/components/gamification/DashboardWidgetTabs";
 import SuggestedExercise from "@/components/dashboard/SuggestedExercise";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import { auth } from "@/lib/auth";
@@ -126,8 +127,9 @@ export default async function DashboardPage() {
   const remainingXp = Math.max(0, nextLevelXp - user.xp);
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-7xl flex-col lg:flex-row">
+    <OnboardingGate>
+      <div className="min-h-screen bg-white">
+        <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-7xl flex-col lg:flex-row">
         <div className="flex-1 border-neutral-200 px-4 py-10 sm:px-6 lg:border-r lg:px-12">
           <section aria-labelledby="dashboard-heading">
             <p className="mb-3 text-xs font-bold uppercase tracking-widest text-primary-700">Dashboard</p>
@@ -135,7 +137,7 @@ export default async function DashboardPage() {
               Xin chào, {user.username}. Hôm nay bạn có thể tiếp tục luyện phát âm.
             </h1>
 
-            <dl className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <dl data-tour="stats" className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-lg border border-warning-200 bg-warning-50 p-4">
                 <dt className="text-sm font-semibold text-warning-700">Chuỗi học</dt>
                 <dd className="mt-1 text-2xl font-bold text-warning-800">{user.streakCount} ngày</dd>
@@ -344,5 +346,6 @@ export default async function DashboardPage() {
         </aside>
       </main>
     </div>
+    </OnboardingGate>
   );
 }
