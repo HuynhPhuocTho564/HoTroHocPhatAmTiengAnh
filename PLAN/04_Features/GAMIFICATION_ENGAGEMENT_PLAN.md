@@ -71,7 +71,7 @@ Hệ thống gamification đã có đủ **cơ chế** (XP, gems, streak, quests
 
 ---
 
-## 4. Nguyên tắc kiến trúc (Áp dụng skill `architect-mode`)
+## 4. Nguyên tắc kiến trúc (Áp dụng skill `SKILL/maintainable-code`)
 
 ### 4.1. Tách biệt Concerns
 - **Logic game** → `src/lib/gamification/` (pure functions, testable)
@@ -97,13 +97,15 @@ Hệ thống gamification đã có đủ **cơ chế** (XP, gems, streak, quests
 
 | Skill | Phase | Mục đích |
 |---|---|---|
-| `architect-mode` | Tất cả | Clean Architecture, SOLID, TypeScript strict |
+| `SKILL/maintainable-code` | Tất cả | KISS, DRY, type safety, cohesion/coupling, naming, SLAP (thay architect-mode) |
 | `gamification_designer` | Tất cả | Thiết kế cân bằng reward, progression curve |
 | `nextjs_app_router_expert` | Tất cả | API routes, server/client components |
-| `hci_consultant` | Phase 1, 2 | Luồng tương tác, timing animation |
-| `accessibility` | Phase 1, 2 | WCAG cho animation (prefers-reduced-motion) |
+| `SKILL/nielsen-ux-heuristics` | Phase 1, 2 | Luồng tương tác, timing animation, 10 heuristic + Fitts/Hick (thay hci_consultant) |
+| `SKILL/ui-color-harmony` | Phase 1, 2 | 60-30-10 + tier color khi đổi màu celebration/feedback |
+| `accessibility` | Phase 1, 2 | WCAG cho animation (prefers-reduced-motion), ARIA, keyboard |
 | `postgresql_expert` | Phase 2, 3 | Schema mới cho milestones, challenges |
 | `testing` | Tất cả | Unit test cho logic, integration test |
+| `SKILL/web-usability-scales` | Cuối mỗi phase | Đo SUS/UEQ Stimulation sau mỗi phase |
 | `project-quality-gate` | Cuối mỗi phase | tsc + test + build |
 
 ---

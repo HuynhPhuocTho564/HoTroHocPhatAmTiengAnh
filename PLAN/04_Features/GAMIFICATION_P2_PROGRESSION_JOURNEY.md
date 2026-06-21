@@ -3,7 +3,7 @@
 > **Phase:** 2/3  
 > **Ưu tiên:** CAO (giữ người dùng lâu dài)  
 > **Ước tính:** 4-5 ngày  
-> **Skills:** `architect-mode`, `gamification_designer`, `postgresql_expert`, `hci_consultant`, `accessibility`, `testing`
+> **Skills:** `SKILL/maintainable-code`, `gamification_designer`, `postgresql_expert`, `SKILL/nielsen-ux-heuristics`, `SKILL/ui-color-harmony`, `accessibility`, `testing`
 
 ---
 

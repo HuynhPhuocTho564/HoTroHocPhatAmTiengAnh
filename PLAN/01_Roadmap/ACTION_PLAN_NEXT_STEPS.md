@@ -384,7 +384,10 @@ Task:
 - Question bank/seed/source review: doc `english_pronunciation_app/.agents/skills/question-bank-curator/SKILL.md`.
 - Web Speech/recording: doc `english_pronunciation_app/.agents/skills/web_speech_api_expert/SKILL.md`.
 - XP/streak/badge/leaderboard: doc `english_pronunciation_app/.agents/skills/gamification_designer/SKILL.md`.
-- UI/UX: doc `english_pronunciation_app/.agents/skills/hci_consultant/SKILL.md`.
+- UI/UX (thiet ke/review): doc `english_pronunciation_app/.agents/skills/SKILL/nielsen-ux-heuristics/SKILL.md` (thay hci_consultant da xoa).
+- UI/UX (doi mau/theme/tier color): doc `english_pronunciation_app/.agents/skills/SKILL/ui-color-harmony/SKILL.md`.
+- UI/UX (do SUS/UEQ/WAMMI): doc `english_pronunciation_app/.agents/skills/SKILL/web-usability-scales/SKILL.md`.
+- Code moi thay doi: doc `english_pronunciation_app/.agents/skills/SKILL/maintainable-code/SKILL.md` (thay architect-mode da xoa).
 - Accessibility: doc `english_pronunciation_app/.agents/skills/accessibility/SKILL.md`.
 - Quality gate truoc khi ket thuc code: doc `english_pronunciation_app/.agents/skills/project-quality-gate/SKILL.md`.
 - Mapping skill theo phase: xem `PLAN/05_AI_Skills/SKILL_USAGE_BY_PHASE.md`.

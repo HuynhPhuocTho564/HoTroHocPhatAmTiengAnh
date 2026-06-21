@@ -3,7 +3,7 @@
 > **Phase:** 3/3  
 > **Ưu tiên:** TRUNG BÌNH (tăng viral & replay value)  
 > **Ước tính:** 3-4 ngày  
-> **Skills:** `architect-mode`, `gamification_designer`, `postgresql_expert`, `testing`
+> **Skills:** `SKILL/maintainable-code`, `gamification_designer`, `postgresql_expert`, `SKILL/nielsen-ux-heuristics`, `testing`
 
 ---
 

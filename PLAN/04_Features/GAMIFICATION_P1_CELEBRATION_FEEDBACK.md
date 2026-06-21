@@ -3,7 +3,7 @@
 > **Phase:** 1/3  
 > **Ưu tiên:** CAO NHẤT (dopamine tức thì)  
 > **Ước tính:** 3-4 ngày  
-> **Skills:** `architect-mode`, `gamification_designer`, `hci_consultant`, `accessibility`, `testing`
+> **Skills:** `SKILL/maintainable-code`, `gamification_designer`, `SKILL/nielsen-ux-heuristics`, `SKILL/ui-color-harmony`, `accessibility`, `testing`
 
 ---
 
