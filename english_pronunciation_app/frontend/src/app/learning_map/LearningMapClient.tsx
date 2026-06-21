@@ -6,6 +6,7 @@ import Badge, { type BadgeVariant } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { getDifficultyLevel } from "@/lib/difficulty";
 
 export type ExerciseUI = {
   id: string;
@@ -445,6 +446,20 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
                       </div>
 
                       <h2 className="text-xl font-bold text-neutral-900">{exercise.name}</h2>
+
+                      {/* Task 5.4: Difficulty badge (Nielsen H6 — Recognition, semantic colors) */}
+                      {(() => {
+                        const difficulty = getDifficultyLevel(exercise.name);
+                        return (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${difficulty.color}`}
+                            aria-label={`Độ khó: ${difficulty.label}`}
+                          >
+                            {"⭐".repeat(difficulty.stars)} {difficulty.label}
+                          </span>
+                        );
+                      })()}
+
                       <p className="mt-2 min-h-[48px] text-sm leading-6 text-neutral-600">
                         {exercise.description || "Bài tập luyện phát âm tiếng Anh."}
                       </p>

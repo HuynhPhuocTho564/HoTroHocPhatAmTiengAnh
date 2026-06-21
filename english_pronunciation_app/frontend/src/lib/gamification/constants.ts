@@ -76,3 +76,8 @@ export const DAILY_REWARD_GEMS = [
 ] as const;
 
 export const DAILY_REWARD_CYCLE_DAYS = 7;
+
+// === Speech Recording ===
+// SpeakWordQuestion auto-stop sau RECORDING_LIMIT_SECONDS giây.
+// Phải khớp với setTimeout trong SpeakWordQuestion.startRecording().
+export const RECORDING_LIMIT_SECONDS = 5;

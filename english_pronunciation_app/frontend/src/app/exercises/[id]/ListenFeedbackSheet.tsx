@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Button from "@/components/ui/Button";
+import { getIpaHint } from "@/lib/phonetics/ipa-hints";
 import { parseWordPrompt, type ExerciseQuestion } from "./ExerciseEngineClient";
 
 type ListenFeedbackSheetProps = {
@@ -102,7 +103,7 @@ export default function ListenFeedbackSheet({
               </div>
             )}
 
-            {/* SAI: contrast comparison + 2 loa nghe so sánh */}
+            {/* SAI: contrast comparison + 2 loa nghe so sánh + IPA hint (Task 5.1) */}
             {!isCorrect && (
               <div className="space-y-3">
                 <p className="font-medium text-neutral-800">
@@ -121,6 +122,28 @@ export default function ListenFeedbackSheet({
                     )}
                   </div>
                 )}
+
+                {/* Task 5.1: IPA hint — giải thích "sai vì sao + cách sửa" (Nielsen H9).
+                    Blue (info/learning) thay vì red (discouraging) — ui-color-harmony. */}
+                {contentData.targetPhoneme &&
+                  (() => {
+                    const ipaHint = getIpaHint(contentData.targetPhoneme);
+                    if (!ipaHint) return null;
+                    return (
+                      <div className="mt-2 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                        <p className="text-sm font-bold text-primary-800">
+                          💡 Mẹo phát âm {ipaHint.symbol}
+                        </p>
+                        <p className="mt-1 text-sm text-primary-700">{ipaHint.tip}</p>
+                        <p className="mt-1 text-xs italic text-primary-600">
+                          {ipaHint.mouthPosition}
+                        </p>
+                        <p className="mt-0.5 text-xs text-primary-500">
+                          Lỗi thường gặp: {ipaHint.commonMistake}
+                        </p>
+                      </div>
+                    );
+                  })()}
               </div>
             )}
 

@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseWordPrompt, type ExerciseQuestion } from "./ExerciseEngineClient";
 import { useWaveformRecorder, type RecorderLevel } from "@/hooks/useWaveformRecorder";
+import { useCountdown } from "@/lib/hooks/useCountdown";
+import { RECORDING_LIMIT_SECONDS } from "@/lib/gamification/constants";
+import IpaPopup from "@/components/ui/IpaPopup";
 import SpeakFeedbackSheet from "./SpeakFeedbackSheet";
 
 type SpeakWordQuestionProps = {
@@ -64,6 +67,8 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
   const [micDenied, setMicDenied] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorder = useWaveformRecorder();
+  // Task 5.2: countdown khi recording — user biết còn bao nhiêu giây (H1)
+  const countdown = useCountdown(RECORDING_LIMIT_SECONDS, status === "recording");
 
   useEffect(() => {
     setSpeechUnsupported(getSpeechCtor() === null);
@@ -106,7 +111,7 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
     void recorder.start();
     try {
       recog.start();
-      window.setTimeout(() => { try { recog.stop(); } catch { /* already stopped */ } }, 5000);
+      window.setTimeout(() => { try { recog.stop(); } catch { /* already stopped */ } }, RECORDING_LIMIT_SECONDS * 1000);
     } catch (e) { console.error("recognition start failed:", e); setStatus("error"); }
   };
 
@@ -120,9 +125,15 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
           <span className="inline-block rounded-full bg-success-100 px-4 py-1.5 text-sm font-bold text-success-700">🗣️ Luyện miệng</span>
         </div>
 
-        {/* Tầng 1: IPA trên (hiện luôn) */}
+        {/* Tầng 1: IPA trên (hiện luôn) — Task 5.3: clickable → popup hint */}
         {contentData.ipa && (
-          <p className="mb-4 text-center font-ipa text-5xl font-bold text-primary-600">{contentData.ipa}</p>
+          <p className="mb-4 text-center">
+            <IpaPopup
+              ipa={contentData.ipa}
+              targetPhoneme={contentData.targetPhoneme}
+              className="text-5xl font-bold text-primary-600"
+            />
+          </p>
         )}
 
         {/* Tầng 2: Từ ẩn dưới IPA */}
@@ -167,8 +178,34 @@ export default function SpeakWordQuestion({ question, onNext }: SpeakWordQuestio
         )}
 
         {status === "recording" && (
-          <div className="mt-4 space-y-3 text-center">
+          <div className="mt-4 space-y-4 text-center">
             <p className={`text-sm font-bold ${hint.color}`}>{hint.text}</p>
+
+            {/* Task 5.2: Countdown circle — user biết còn bao nhiêu giây (H1).
+                SVG circle: strokeDasharray giảm theo remaining.
+                Amber khi >2s, error khi ≤2s (gần hết giờ). */}
+            <div className="relative mx-auto h-24 w-24">
+              <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="6" />
+                <circle
+                  cx="50" cy="50" r="42" fill="none"
+                  stroke={countdown <= 2 ? "#ef4444" : "#f59e0b"}
+                  strokeWidth="6"
+                  strokeDasharray={`${(countdown / RECORDING_LIMIT_SECONDS) * 264} 264`}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-linear"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span
+                  className={`text-3xl font-black ${countdown <= 2 ? "text-error-600" : "text-warning-600"}`}
+                  aria-label={`Còn ${countdown} giây`}
+                >
+                  {countdown}
+                </span>
+              </div>
+            </div>
+
             <button type="button" onClick={stopRecording}
               className="rounded-xl bg-neutral-200 px-8 py-3 font-bold text-neutral-700 transition-colors hover:bg-neutral-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-neutral-400">
               Dừng ghi âm
