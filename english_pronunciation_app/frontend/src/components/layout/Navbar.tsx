@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 import NavbarClient, { type NavbarLink } from "./NavbarClient";
 
 const navLinks: Array<NavbarLink & { authOnly: boolean }> = [
-  { href: "/dashboard", label: "Trang chủ", authOnly: true },
-  { href: "/practice", label: "Bảng IPA", authOnly: true },
-  { href: "/learning_map", label: "Lộ trình", authOnly: true },
-  { href: "/checkin", label: "Điểm danh", authOnly: true },
-  { href: "/leaderboard", label: "Xếp hạng", authOnly: true },
-  { href: "/badges", label: "Huy hiệu", authOnly: true },
+  { href: "/dashboard", label: "Trang chủ", icon: "🏠", authOnly: true },
+  { href: "/practice", label: "Bảng IPA", icon: "🔤", authOnly: true },
+  { href: "/learning_map", label: "Lộ trình", icon: "🗺️", authOnly: true },
+  { href: "/checkin", label: "Điểm danh", icon: "📅", authOnly: true },
+  { href: "/leaderboard", label: "Xếp hạng", icon: "🏆", authOnly: true },
+  { href: "/badges", label: "Huy hiệu", icon: "🏅", authOnly: true },
 ];
 
 export default async function Navbar() {

@@ -9,6 +9,9 @@ import GemsDisplay from "@/components/gamification/GemsDisplay";
 export type NavbarLink = {
   href: string;
   label: string;
+  /** Emoji icon hiển thị trước label (Nielsen H6 — Recognition over Recall).
+   *  `aria-hidden` trên icon → screen reader chỉ đọc label. */
+  icon?: string;
 };
 
 type NavbarUser = {
@@ -84,6 +87,11 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
                       aria-current={active ? "page" : undefined}
                       className={navLinkClass(active)}
                     >
+                      {link.icon && (
+                        <span aria-hidden="true" className="mr-1.5">
+                          {link.icon}
+                        </span>
+                      )}
                       {link.label}
                     </Link>
                   );
@@ -178,6 +186,11 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
                     aria-current={active ? "page" : undefined}
                     className={mobileLinkClass(active)}
                   >
+                    {link.icon && (
+                      <span aria-hidden="true" className="mr-2">
+                        {link.icon}
+                      </span>
+                    )}
                     {link.label}
                   </Link>
                 );

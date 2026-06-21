@@ -4,11 +4,14 @@ import DailyCheckIn from "@/components/gamification/DailyCheckIn";
 import DailyQuestsWidget from "@/components/gamification/DailyQuestsWidget";
 import WeeklyChallengeCard from "@/components/gamification/WeeklyChallengeCard";
 import SpinWheel from "@/components/gamification/SpinWheel";
+import DashboardWidgetTabs from "@/components/gamification/DashboardWidgetTabs";
+import SuggestedExercise from "@/components/dashboard/SuggestedExercise";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import { auth } from "@/lib/auth";
 import { getNextLevelXp } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { localizeBadgeType } from "@/lib/badges";
 
 function formatAttemptStatus(status: string) {
   if (status === "COMPLETED") return "Đã hoàn thành";
@@ -31,7 +34,7 @@ export default async function DashboardPage() {
     redirect("/login?callbackUrl=/dashboard");
   }
 
-  const [user, completedExerciseGroups, totalActiveExercises] = await Promise.all([
+  const [user, completedExerciseGroups, totalActiveExercises, suggestedExercise] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -87,6 +90,24 @@ export default async function DashboardPage() {
       where: {
         status: "ACTIVE",
       },
+    }),
+    // Task 2.2: bài gợi ý = bài ACTIVE chưa đạt ≥70 điểm, ưu tiên bài đầu tiên
+    prisma.exercise.findFirst({
+      where: {
+        status: "ACTIVE",
+        // Chưa có attempt nào đạt ≥70 (chưa "hoàn thành" theo threshold)
+        attempts: {
+          none: {
+            userId: session.user.id,
+            score: { gte: 70 },
+          },
+        },
+      },
+      include: {
+        topic: { select: { name: true } },
+        map: { select: { name: true } },
+      },
+      orderBy: { id: "asc" },
     }),
   ]);
 
@@ -164,7 +185,7 @@ export default async function DashboardPage() {
             </section>
           </Card>
 
-          <Card padding="lg">
+          <Card padding="lg" data-tour="continue-wrapper">
             <section aria-labelledby="continue-learning-heading">
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Tiếp tục học</p>
               {latestAttempt ? (
@@ -198,6 +219,24 @@ export default async function DashboardPage() {
               )}
             </section>
           </Card>
+
+          {/* Task 2.2: "Gợi ý hôm nay" — bài chưa hoàn thành tiếp theo.
+              Đặt ngay dưới "Tiếp tục học". Ẩn nếu user đã hoàn thành tất cả. */}
+          <div className="mt-6">
+            <SuggestedExercise
+              exercise={
+                suggestedExercise
+                  ? {
+                      id: suggestedExercise.id,
+                      name: suggestedExercise.name,
+                      description: suggestedExercise.description,
+                      topicName: suggestedExercise.topic.name,
+                      mapName: suggestedExercise.map.name,
+                    }
+                  : null
+              }
+            />
+          </div>
 
           <section className="mt-8" aria-labelledby="recent-attempts-heading">
             <h2 id="recent-attempts-heading" className="mb-4 text-xl font-bold text-neutral-900">
@@ -257,51 +296,51 @@ export default async function DashboardPage() {
             </Link>
           </nav>
 
-          <div className="mb-6">
-            <DailyCheckIn
-              currentStreak={user.streakCount}
-              longestStreak={user.longestStreak}
-              totalCheckIns={user.totalCheckIns}
-              lastCheckIn={user.lastCheckInDate?.toISOString() ?? null}
-            />
-          </div>
-
-          <DailyQuestsWidget />
-
-          <div className="mb-6">
-            <WeeklyChallengeCard />
-          </div>
-
-          <div className="mb-6">
-            <SpinWheel />
-          </div>
-
-          <Card>
-            <section aria-labelledby="recent-badges-heading">
-              <h2 id="recent-badges-heading" className="mb-4 text-lg font-bold text-neutral-900">
-                Huy hiệu gần đây
-              </h2>
-              {user.userBadges.length > 0 ? (
-                <ul className="space-y-3">
-                  {user.userBadges.map((userBadge) => (
-                    <li key={userBadge.id} className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-neutral-900">{userBadge.badge.name}</p>
-                        <p className="text-xs text-neutral-500">{userBadge.earnedAt.toLocaleDateString("vi-VN")}</p>
-                      </div>
-                      <Badge variant="info" size="sm">
-                        {userBadge.badge.type}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-neutral-600">
-                  Chưa có huy hiệu. Hãy hoàn thành bài tập hoặc điểm danh để mở khóa.
-                </p>
-              )}
-            </section>
-          </Card>
+          <DashboardWidgetTabs
+            todayContent={
+              <>
+                <DailyCheckIn
+                  currentStreak={user.streakCount}
+                  longestStreak={user.longestStreak}
+                  totalCheckIns={user.totalCheckIns}
+                  lastCheckIn={user.lastCheckInDate?.toISOString() ?? null}
+                />
+                <DailyQuestsWidget />
+              </>
+            }
+            challengeContent={<WeeklyChallengeCard />}
+            rewardsContent={
+              <>
+                <SpinWheel />
+                <Card>
+                  <section aria-labelledby="recent-badges-heading">
+                    <h2 id="recent-badges-heading" className="mb-4 text-lg font-bold text-neutral-900">
+                      Huy hiệu gần đây
+                    </h2>
+                    {user.userBadges.length > 0 ? (
+                      <ul className="space-y-3">
+                        {user.userBadges.map((userBadge) => (
+                          <li key={userBadge.id} className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-neutral-900">{userBadge.badge.name}</p>
+                              <p className="text-xs text-neutral-500">{userBadge.earnedAt.toLocaleDateString("vi-VN")}</p>
+                            </div>
+                            <Badge variant="info" size="sm">
+                              {localizeBadgeType(userBadge.badge.type)}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-neutral-600">
+                        Chưa có huy hiệu. Hãy hoàn thành bài tập hoặc điểm danh để mở khóa.
+                      </p>
+                    )}
+                  </section>
+                </Card>
+              </>
+            }
+          />
         </aside>
       </main>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -64,6 +65,34 @@ export default function ExerciseEngineClient({
     combo,
   } = useExerciseEngine(exercise, unlocks);
 
+  // Task 2.5: Confirm trước khi thoát bài đang làm (Nielsen H5 — Error Prevention).
+  // Chỉ cảnh báo khi đã trả lời ≥1 câu và chưa kết thúc → tránh cảnh báo phiền
+  // khi user mới vào chưa làm gì hoặc đã xong.
+  const hasProgress = currentIndex > 0 && !isFinished;
+
+  const handleBack = useCallback(() => {
+    if (hasProgress) {
+      const confirmed = window.confirm(
+        "Bạn có chắc muốn thoát? Kết quả hiện tại sẽ không được lưu.",
+      );
+      if (!confirmed) return;
+    }
+    router.push("/learning_map");
+  }, [hasProgress, router]);
+
+  // Cảnh báo khi user đóng tab / reload / browser back khi đang làm bài.
+  useEffect(() => {
+    if (!hasProgress) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Chrome/Firefox hiện thông báo native khi preventDefault được gọi.
+      // returnValue cần set cho một số trình duyệt cũ.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasProgress]);
+
   // === Empty exercise guard ===
   if (questions.length === 0) {
     return (
@@ -117,7 +146,7 @@ export default function ExerciseEngineClient({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => router.push("/learning_map")}
+            onClick={handleBack}
             aria-label="Quay về lộ trình"
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500"
           >
