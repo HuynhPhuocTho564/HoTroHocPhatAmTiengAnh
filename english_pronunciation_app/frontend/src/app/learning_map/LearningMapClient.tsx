@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Badge, { type BadgeVariant } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { getDifficultyLevel } from "@/lib/difficulty";
+import { isUnseenExercise, markExerciseSeen } from "@/lib/new-content";
 
 export type ExerciseUI = {
   id: string;
@@ -158,6 +159,23 @@ function groupMapsBySubcategory(maps: LearningMapUI[]) {
 export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
   const [selectedTopic, setSelectedTopic] = useState<TopicUI | null>(null);
   const [selectedMap, setSelectedMap] = useState<LearningMapUI | null>(null);
+
+  // Task 6.3: track exercise đã seen (localStorage) — badge "MỚI" ẩn sau khi click
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const allExercises = topics.flatMap((t) => t.maps.flatMap((m) => m.exercises));
+    const seen = new Set<string>();
+    for (const ex of allExercises) {
+      if (!isUnseenExercise(ex.id)) seen.add(ex.id);
+    }
+    setSeenIds(seen);
+  }, [topics]);
+
+  const handleExerciseClick = (exerciseId: string) => {
+    if (seenIds.has(exerciseId)) return;
+    markExerciseSeen(exerciseId);
+    setSeenIds((prev) => new Set([...prev, exerciseId]));
+  };
 
   const overview = useMemo(() => {
     const totalMaps = topics.reduce((sum, topic) => sum + topic.maps.length, 0);
@@ -447,18 +465,30 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
 
                       <h2 className="text-xl font-bold text-neutral-900">{exercise.name}</h2>
 
-                      {/* Task 5.4: Difficulty badge (Nielsen H6 — Recognition, semantic colors) */}
-                      {(() => {
-                        const difficulty = getDifficultyLevel(exercise.name);
-                        return (
+                      {/* Task 5.4: Difficulty badge + Task 6.3: New content badge */}
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {(() => {
+                          const difficulty = getDifficultyLevel(exercise.name);
+                          return (
+                            <span
+                              className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${difficulty.color}`}
+                              aria-label={`Độ khó: ${difficulty.label}`}
+                            >
+                              {"⭐".repeat(difficulty.stars)} {difficulty.label}
+                            </span>
+                          );
+                        })()}
+                        {/* Task 6.3: "MỚI" badge — bài user chưa từng thấy (content freshness).
+                            Dựa trên localStorage: chưa seen = "MỚI", tự ẩn sau khi click vào bài. */}
+                        {!seenIds.has(exercise.id) && (
                           <span
-                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${difficulty.color}`}
-                            aria-label={`Độ khó: ${difficulty.label}`}
+                            className="inline-block rounded-full bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700"
+                            aria-label="Bài mới"
                           >
-                            {"⭐".repeat(difficulty.stars)} {difficulty.label}
+                            ✨ MỚI
                           </span>
-                        );
-                      })()}
+                        )}
+                      </div>
 
                       <p className="mt-2 min-h-[48px] text-sm leading-6 text-neutral-600">
                         {exercise.description || "Bài tập luyện phát âm tiếng Anh."}
@@ -499,6 +529,7 @@ export default function LearningMapClient({ topics }: { topics: TopicUI[] }) {
                     <Link
                       key={exercise.id}
                       href={`/exercises/${exercise.id}`}
+                      onClick={() => handleExerciseClick(exercise.id)}
                       className={`block rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${classes.border}`}
                     >
                       {content}

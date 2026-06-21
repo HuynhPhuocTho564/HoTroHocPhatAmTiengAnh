@@ -76,14 +76,30 @@ export default function DailyQuestsWidget() {
   if (quests.length === 0) return null;
 
   const completedCount = quests.filter((q) => q.completed).length;
+  const incompleteCount = quests.length - completedCount;
+  const allComplete = incompleteCount === 0;
 
   return (
     <Card className="mb-6 border-primary-200 bg-primary-50">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-bold text-neutral-900">Nhiệm vụ hằng ngày</h3>
-        <span className="text-xs font-bold text-primary-600">
-          {completedCount}/{quests.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold ${allComplete ? "text-success-600" : "text-primary-600"}`}>
+            {completedCount}/{quests.length}
+          </span>
+          {/* Task 6.5: incomplete quest badge — "come back" hook khi user rời app (Goal-Gradient).
+              Ẩn khi tất cả quests đã hoàn thành. */}
+          {!allComplete && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent-100 px-2.5 py-0.5 text-xs font-bold text-accent-700">
+              📋 {incompleteCount} chưa xong
+            </span>
+          )}
+          {allComplete && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-700">
+              ✨ Hoàn thành
+            </span>
+          )}
+        </div>
       </div>
 
       <ul className="space-y-3">
@@ -123,6 +139,14 @@ export default function DailyQuestsWidget() {
           );
         })}
       </ul>
+
+      {/* Task 6.5: progress summary text — khuyến khích hoàn thành bonus (Goal-Gradient).
+          Đổi text khi đã hoàn thành tất cả để chúc mừng. */}
+      <p className={`mt-3 text-xs ${allComplete ? "font-bold text-success-700" : "text-neutral-500"}`}>
+        {allComplete
+          ? "🎉 Bạn đã hoàn thành tất cả nhiệm vụ hôm nay! Hẹn gặp lại ngày mai!"
+          : "Hoàn thành tất cả nhiệm vụ để nhận bonus 💎 và XP!"}
+      </p>
     </Card>
   );
 }

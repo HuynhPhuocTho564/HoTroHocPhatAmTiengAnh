@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import AchievementShare from "@/components/gamification/AchievementShare";
 import { SkeletonCardGrid } from "@/components/ui/Skeleton";
 import { localizeBadgeType } from "@/lib/badges";
 
@@ -105,11 +106,20 @@ function BadgeCard({
       </div>
 
       {earned && "earnedAt" in badge ? (
-        <div className="flex items-center justify-between">
-          <Badge variant="success" size="sm">
-            Đã đạt
-          </Badge>
-          <span className="text-xs text-neutral-500">{new Date(badge.earnedAt).toLocaleDateString("vi-VN")}</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant="success" size="sm">
+              Đã đạt
+            </Badge>
+            <span className="text-xs text-neutral-500">{new Date(badge.earnedAt).toLocaleDateString("vi-VN")}</span>
+          </div>
+          {/* Task 6.1: share button cho badge đã đạt (Nielsen H7 — flexibility) */}
+          <AchievementShare
+            variant="compact"
+            icon="🏅"
+            title={`Tôi vừa đạt huy hiệu "${badge.name}" trên PhatAmEN!`}
+            description={badge.description ?? `Huy hiệu ${localizeBadgeType(badge.type)}`}
+          />
         </div>
       ) : progress ? (
         <div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import AchievementShare from "@/components/gamification/AchievementShare";
 import { playSfx } from "@/lib/sfx";
 import { celebrate } from "@/lib/confetti";
 import {
@@ -205,6 +206,18 @@ export default function ExerciseSummaryScreen({
             <p className="text-sm font-semibold text-amber-600">
               🏆 Điểm hạng xếp theo tuần/tháng — cạnh tranh trên bảng xếp hạng!
             </p>
+
+            {/* Task 6.1: share thành tích khi high score (Nielsen H7 — flexibility) */}
+            {isHighScore && (
+              <div className="flex justify-center">
+                <AchievementShare
+                  variant="compact"
+                  icon="⭐"
+                  title={`Tôi vừa đạt ${score}% bài "${exercise.name}" trên PhatAmEN!`}
+                  description={`⭐ +${submitResult.rewards.totalXpEarned} XP | 🏆 ${submitResult.rating}`}
+                />
+              </div>
+            )}
 
             {/* Progress bias — chỉ hiện nếu previousBestScore !== null */}
             {progressBias !== null && (

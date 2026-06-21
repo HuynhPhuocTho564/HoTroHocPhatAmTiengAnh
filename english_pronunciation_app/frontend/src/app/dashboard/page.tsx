@@ -9,12 +9,15 @@ import SuggestedExercise from "@/components/dashboard/SuggestedExercise";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import RankChangeNotification from "@/components/gamification/RankChangeNotification";
 import SeasonEndOverlay from "@/components/gamification/SeasonEndOverlay";
+import SkillRadar from "@/components/dashboard/SkillRadar";
+import { calculateSkillScores } from "@/lib/skill-radar";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import { auth } from "@/lib/auth";
 import { getNextLevelXp } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import { localizeBadgeType } from "@/lib/badges";
+import { startOfLocalDay } from "@/lib/period";
 
 function formatAttemptStatus(status: string) {
   if (status === "COMPLETED") return "Đã hoàn thành";
@@ -37,7 +40,7 @@ export default async function DashboardPage() {
     redirect("/login?callbackUrl=/dashboard");
   }
 
-  const [user, completedExerciseGroups, totalActiveExercises, suggestedExercise] = await Promise.all([
+  const [user, completedExerciseGroups, totalActiveExercises, suggestedExercise, skillAttempts] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -112,11 +115,25 @@ export default async function DashboardPage() {
       },
       orderBy: { id: "asc" },
     }),
+    // Task 6.4: skill radar data — attempts với exercise.topicId để tính avg per topic
+    prisma.exerciseAttempt.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 200, // Giới hạn để performance OK
+      select: {
+        score: true,
+        exerciseId: true,
+        exercise: { select: { topicId: true } },
+      },
+    }),
   ]);
 
   if (!user) {
     redirect("/login?callbackUrl=/dashboard");
   }
+
+  // Task 6.4: skill radar — tính điểm trung bình theo 4 chủ đề IPA
+  const skillScores = calculateSkillScores(skillAttempts);
 
   const completedExerciseCount = completedExerciseGroups.length;
   const nextLevelXp = getNextLevelXp(user.level);
@@ -127,6 +144,14 @@ export default async function DashboardPage() {
       : Math.min(100, Math.round(((user.xp - previousLevelXp) / (nextLevelXp - previousLevelXp)) * 100));
   const latestAttempt = user.exerciseAttempts[0];
   const remainingXp = Math.max(0, nextLevelXp - user.xp);
+
+  // Task 6.2: Streak warning — user có streak > 0 nhưng chưa luyện hôm nay (loss aversion).
+  // lastCheckInDate cập nhật khi điểm danh (không cần luyện bài), nên dùng exerciseAttempt
+  // để xác định "đã luyện hôm nay". Nếu chưa luyện + streak > 0 → hiện warning.
+  const today = startOfLocalDay(new Date());
+  const lastPracticeDay = latestAttempt ? startOfLocalDay(latestAttempt.createdAt) : null;
+  const practicedToday = lastPracticeDay?.getTime() === today.getTime();
+  const showStreakWarning = !practicedToday && user.streakCount > 0;
 
   return (
     <OnboardingGate>
@@ -244,6 +269,25 @@ export default async function DashboardPage() {
             />
           </div>
 
+          {/* Task 6.2: Streak warning — loss aversion (Nielsen H1 — Visibility).
+              Chỉ hiện khi user có streak > 0 nhưng chưa luyện hôm nay. */}
+          {showStreakWarning && (
+            <div
+              className="mt-6 rounded-lg border-2 border-amber-300 bg-amber-50 p-4"
+              role="alert"
+            >
+              <p className="font-bold text-amber-800">
+                ⚠️ Chuỗi {user.streakCount} ngày của bạn sẽ mất nếu không luyện tập trước nửa đêm!
+              </p>
+              <Link
+                href="/learning_map"
+                className="mt-1 inline-block text-sm font-bold text-amber-700 hover:underline"
+              >
+                Luyện ngay bây giờ →
+              </Link>
+            </div>
+          )}
+
           <section className="mt-8" aria-labelledby="recent-attempts-heading">
             <h2 id="recent-attempts-heading" className="mb-4 text-xl font-bold text-neutral-900">
               Bài làm gần đây
@@ -289,6 +333,11 @@ export default async function DashboardPage() {
               <p className="text-sm font-medium text-neutral-500">Học viên cấp độ {user.level}</p>
             </div>
           </section>
+
+          {/* Task 6.4: Skill Radar — hiển thị điểm mạnh/yếu ở 4 chủ đề IPA */}
+          <div className="mb-8">
+            <SkillRadar scores={skillScores} />
+          </div>
 
           <nav className="mb-8 space-y-2" aria-label="Liên kết nhanh dashboard">
             <Link href="/checkin" className={quietLinkClass()}>
