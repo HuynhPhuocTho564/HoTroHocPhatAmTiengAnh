@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import { SkeletonLeaderboardList } from "@/components/ui/Skeleton";
 
 type LeaderboardType = "tuan" | "thang" | "all";
 
@@ -48,7 +49,7 @@ type LeaderboardData = {
 const filters: Array<{ id: LeaderboardType; name: string }> = [
   { id: "tuan", name: "Tuần này" },
   { id: "thang", name: "Tháng này" },
-  { id: "all", name: "Tất thời gian" },
+  { id: "all", name: "Mọi thời đại" },
 ];
 
 function getRankLabel(rank: number) {
@@ -105,7 +106,7 @@ export default function LeaderboardPage() {
       <main className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-neutral-900 mb-3">Bảng xếp hạng</h1>
-          <p className="text-lg text-neutral-600">Điểm hạng reset theo tuần/tháng. Tất thời gian xếp theo tổng XP.</p>
+          <p className="text-lg text-neutral-600">Điểm hạng reset theo tuần/tháng. Mọi thời đại xếp theo tổng XP.</p>
         </div>
 
         <div className="flex justify-center gap-2 mb-8">
@@ -135,7 +136,7 @@ export default function LeaderboardPage() {
                   </Badge>
                 </div>
                 <div className="text-sm text-neutral-600">
-                  {data.type === "all" ? "Tất thời gian" : `Kỳ ${data.period}`}
+                  {data.type === "all" ? "Mọi thời đại" : `Kỳ ${data.period}`}
                 </div>
               </div>
               <div className="text-right">
@@ -146,7 +147,7 @@ export default function LeaderboardPage() {
           </Card>
         )}
 
-        {isLoading && <Card>Đang tải bảng xếp hạng...</Card>}
+        {isLoading && <SkeletonLeaderboardList count={5} />}
         {error && <Card className="border-error-200 text-error-600">{error}</Card>}
 
         {!isLoading && !error && (

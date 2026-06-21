@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import { DAILY_REWARD_GEMS, DAILY_REWARD_CYCLE_DAYS } from "@/lib/gamification/constants";
 
 type DailyReward = {
   day: number;
-  coins: number;
+  gems: number;
   bonus?: string;
   claimed: boolean;
   isToday: boolean;
@@ -21,11 +22,11 @@ type DailyRewardsPopupProps = {
 /**
  * DailyRewardsPopup - Popup rương quà 7 ngày
  * Hiển thị tự động khi user mở app lần đầu trong ngày
- * 
+ *
  * Logic:
  * - 7 rương tương ứng 7 ngày trong tuần
  * - Chỉ mở được rương ngày hôm nay
- * - Phần thưởng tăng dần: Ngày 1 = 10 xu, Ngày 7 = 50 xu + Huy hiệu
+ * - Phần thưởng (gems) lấy từ DAILY_REWARD_GEMS constant, không hardcode
  * - Nếu bỏ lỡ 1 ngày, reset về Ngày 1
  */
 export default function DailyRewardsPopup({
@@ -36,16 +37,14 @@ export default function DailyRewardsPopup({
   const [showReward, setShowReward] = useState(false);
   const [claimedReward, setClaimedReward] = useState<DailyReward | null>(null);
 
-  // Tạo danh sách 7 rương quà
-  const rewards: DailyReward[] = [
-    { day: 1, coins: 10, claimed: currentStreak >= 1, isToday: currentStreak === 0 },
-    { day: 2, coins: 15, claimed: currentStreak >= 2, isToday: currentStreak === 1 },
-    { day: 3, coins: 20, claimed: currentStreak >= 3, isToday: currentStreak === 2 },
-    { day: 4, coins: 25, claimed: currentStreak >= 4, isToday: currentStreak === 3 },
-    { day: 5, coins: 30, claimed: currentStreak >= 5, isToday: currentStreak === 4 },
-    { day: 6, coins: 40, claimed: currentStreak >= 6, isToday: currentStreak === 5 },
-    { day: 7, coins: 50, bonus: "🏆 Huy hiệu", claimed: currentStreak >= 7, isToday: currentStreak === 6 },
-  ];
+  // Tạo danh sách 7 rương quà từ constant
+  const rewards: DailyReward[] = DAILY_REWARD_GEMS.map((entry) => ({
+    day: entry.day,
+    gems: entry.gems,
+    bonus: "bonus" in entry ? entry.bonus : undefined,
+    claimed: currentStreak >= entry.day,
+    isToday: currentStreak === entry.day - 1,
+  }));
 
   const todayReward = rewards.find((r) => r.isToday);
 
@@ -95,7 +94,7 @@ export default function DailyRewardsPopup({
             <div className="w-px h-12 bg-neutral-200"></div>
             <div className="text-center">
               <div className="text-lg font-bold text-neutral-900">
-                Ngày {(currentStreak % 7) + 1}/7
+                Ngày {(currentStreak % DAILY_REWARD_CYCLE_DAYS) + 1}/{DAILY_REWARD_CYCLE_DAYS}
               </div>
               <div className="text-xs text-neutral-600 mt-1">Chu kỳ tuần</div>
             </div>
@@ -108,7 +107,7 @@ export default function DailyRewardsPopup({
                 key={reward.day}
                 className={`relative rounded-lg p-3 text-center transition-all ${
                   reward.isToday
-                    ? "bg-gradient-to-br from-yellow-100 to-orange-100 border-2 border-yellow-400 animate-pulse"
+                    ? "bg-gradient-to-br from-purple-100 to-indigo-100 border-2 border-purple-400"
                     : reward.claimed
                     ? "bg-success-100 border-2 border-success-400"
                     : "bg-neutral-100 border border-neutral-300 opacity-50"
@@ -126,10 +125,10 @@ export default function DailyRewardsPopup({
 
                 {/* Reward */}
                 <div className="text-xs font-bold text-neutral-900">
-                  {reward.coins} xu
+                  {reward.gems} 💎
                 </div>
                 {reward.bonus && (
-                  <div className="text-xs text-yellow-700 mt-1">
+                  <div className="text-xs text-purple-700 mt-1">
                     {reward.bonus}
                   </div>
                 )}
@@ -144,32 +143,18 @@ export default function DailyRewardsPopup({
             ))}
           </div>
 
-          {/* Claim Button */}
+          {/* Claim Button — subtle hover feedback (H8: tránh animate-bounce distracting) */}
           {todayReward && (
             <Button
               variant="primary"
               size="lg"
               fullWidth
               onClick={handleClaim}
-              className="animate-bounce"
+              className="hover:scale-[1.02] transition-transform"
             >
               🎁 Nhận quà ngày {todayReward.day}
             </Button>
           )}
-
-          {/* Warning */}
-          <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <div className="text-2xl">⚠️</div>
-              <div className="text-sm text-neutral-700">
-                <p className="font-bold mb-1">Lưu ý:</p>
-                <p>
-                  Nếu bỏ lỡ 1 ngày không nhận quà, chuỗi streak sẽ reset về Ngày 1.
-                  Hãy quay lại mỗi ngày để duy trì streak!
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </Modal>
 
@@ -183,7 +168,7 @@ export default function DailyRewardsPopup({
         >
           <div className="text-center space-y-6">
             {/* Animation */}
-            <div className="text-8xl animate-bounce">🎉</div>
+            <div className="text-8xl">🎉</div>
 
             {/* Message */}
             <div>
@@ -195,14 +180,14 @@ export default function DailyRewardsPopup({
               </p>
             </div>
 
-            {/* Reward Display */}
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-8 border-2 border-yellow-300">
-              <div className="text-6xl mb-4">🪙</div>
-              <div className="text-4xl font-bold text-yellow-700 mb-2">
-                +{claimedReward.coins} xu
+            {/* Reward Display — gems purple gradient (ui-color-harmony: currency palette) */}
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-8 border-2 border-purple-300">
+              <div className="text-6xl mb-4">💎</div>
+              <div className="text-4xl font-bold text-purple-700 mb-2">
+                +{claimedReward.gems} 💎
               </div>
               {claimedReward.bonus && (
-                <div className="text-xl font-bold text-yellow-700 mt-3">
+                <div className="text-xl font-bold text-purple-700 mt-3">
                   {claimedReward.bonus}
                 </div>
               )}

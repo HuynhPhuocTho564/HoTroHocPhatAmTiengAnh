@@ -72,11 +72,21 @@ Chi tiết thay đổi trong `rewards` array:
 
 ## Task 1.2: Xóa Dead Code
 
-### Task 1.2.1: Xóa Dark Mode CSS trong globals.css
+> ⚠️ **FLAG PLAN SAI (2026-06-21, branch feature/ui-ux-improvements):**
+> Task 1.2.1 (xóa CSS dark mode) **KHÔNG thực hiện**. Đánh giá lại code thực tế phát hiện dark mode KHÔNG phải dead code — là **feature đang dở**:
+> - `ThemeProvider.tsx` lock `setMode = () => {}` (no-op) + comment "Force light mode only" → dark mode bị khóa cố ý, không phải không tồn tại
+> - `ThemeToggle.tsx` (component UI) vẫn tồn tại với 3 option Sáng/Tối/Máy
+> - **13 file component dùng `dark:` variants** (106 occurrences): LoginForm, RegisterForm, ForgotPasswordForm, ResetPasswordForm, AuthShell, PasswordInput, ThemeToggle, NavbarClient, SignOutButton, Button, Card, GemsDisplay, reset-password/page
+> - CSS `html.dark` trong globals.css (dòng 118-239) là **fallback styles** cho các `dark:` variants này
+> - Nếu xóa CSS → sau này mở lại dark mode (unlock ThemeProvider) thì UI vỡ → tạo nợ kỹ thuật
+> - Quyết định (user PhuocTho): **giữ CSS dark, flag plan sai**. Nếu sau này xác định dark mode sẽ KHÔNG bao giờ bật → lúc đó xóa CSS + xóa `dark:` variants + xóa ThemeToggle/ThemeProvider cùng lúc (scope lớn hơn)
+> - Task 1.2.2 (archive legacy styles.css) **vẫn thực hiện** — phần này plan đúng
+
+### Task 1.2.1: Xóa Dark Mode CSS trong globals.css ~~(BỎ — flag sai ở trên)~~
 
 **File:** `frontend/src/app/globals.css`
 
-**Xóa từ dòng 118 đến dòng 239** (122 dòng dark mode CSS):
+**~~Xóa từ dòng 118 đến dòng 239~~** (122 dòng dark mode CSS):
 ```css
 /* XÓA TOÀN BỘ BLOCK NÀY */
 html.dark { ... }
@@ -88,8 +98,10 @@ html.dark .bg-white { ... }
 **Giữ lại:**
 - `@custom-variant dark` (dòng 2) — giữ để không lỗi nếu sau này cần
 - Light mode styles — giữ nguyên
+- **CSS `html.dark` (dòng 118-239) — GIỮ (đảo ngược quyết định plan)**
 
-**Lý do:** Dark mode bị force-disable trong layout.tsx, 122 dòng CSS này là dead code.
+**~~Lý do~~:** ~~Dark mode bị force-disable trong layout.tsx, 122 dòng CSS này là dead code.~~
+**Lý do giữ:** Dark mode là feature dở (xem flag ở đầu Task 1.2). Xóa tạo nợ kỹ thuật.
 
 ### Task 1.2.2: Archive hoặc xóa legacy styles.css
 

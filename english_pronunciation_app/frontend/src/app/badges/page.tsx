@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import { SkeletonCardGrid } from "@/components/ui/Skeleton";
+import { localizeBadgeType } from "@/lib/badges";
 
 type BadgeCategory = "progress" | "skill" | "streak" | "improvement" | "ranking";
 
@@ -91,7 +93,7 @@ function BadgeCard({
           {badge.name.slice(0, 1).toUpperCase()}
         </div>
         <Badge variant={getBadgeVariant(badge.type)} size="sm">
-          {badge.type}
+          {localizeBadgeType(badge.type)}
         </Badge>
       </div>
 
@@ -236,7 +238,7 @@ export default function BadgesPage() {
           ))}
         </div>
 
-        {isLoading && <Card>Đang tải huy hiệu...</Card>}
+        {isLoading && <SkeletonCardGrid count={6} />}
         {error && <Card className="border-error-200 text-error-600">{error}</Card>}
 
         {!isLoading && !error && (

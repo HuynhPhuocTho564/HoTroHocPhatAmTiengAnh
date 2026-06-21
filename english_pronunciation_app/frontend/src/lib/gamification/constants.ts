@@ -59,3 +59,20 @@ export const EXTRA_SPINS_RANGE = 3;
 export const COMPLETION_WEIGHT = 0.6;
 export const SCORE_WEIGHT = 0.4;
 export const MAX_EXERCISE_SCORE = 100;
+
+// === Daily Check-in Rewards (Gems) ===
+// 7-day streak cycle. Gems scale gently so shop economy stays balanced.
+// Day 7 adds a badge bonus alongside the gem reward.
+// UI (DailyRewardsPopup) reads this array instead of hardcoding values,
+// so reward tuning lives in one place (maintainable-code: constants).
+export const DAILY_REWARD_GEMS = [
+  { day: 1, gems: 5 },
+  { day: 2, gems: 8 },
+  { day: 3, gems: 10 },
+  { day: 4, gems: 12 },
+  { day: 5, gems: 15 },
+  { day: 6, gems: 20 },
+  { day: 7, gems: 25, bonus: "🏆 Huy hiệu" },
+] as const;
+
+export const DAILY_REWARD_CYCLE_DAYS = 7;
