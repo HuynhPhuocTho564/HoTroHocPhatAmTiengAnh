@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Languages, Map, CalendarCheck, Trophy, Award } from "lucide-react";
+import { Home, Languages, Map, CalendarCheck, Trophy, Award, ShoppingBag } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import GemsDisplay from "@/components/gamification/GemsDisplay";
 
@@ -13,12 +13,13 @@ export type NavbarLink = {
 };
 
 // Map href → Lucide icon component (H6 — Recognition over recall, consistent style).
-// Icons chosen for semantic match: Home, IPA (Languages), Learning Map, Check-in, Ranking, Badges.
+// Icons chosen for semantic match: Home, IPA (Languages), Learning Map, Check-in, Shop, Ranking, Badges.
 const NAV_ICONS: Record<string, typeof Home> = {
   "/dashboard": Home,
   "/practice": Languages,
   "/learning_map": Map,
   "/checkin": CalendarCheck,
+  "/shop": ShoppingBag,
   "/leaderboard": Trophy,
   "/badges": Award,
 };

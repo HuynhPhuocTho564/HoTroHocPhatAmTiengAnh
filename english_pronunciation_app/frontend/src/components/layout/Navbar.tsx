@@ -7,6 +7,7 @@ const navLinks: Array<NavbarLink & { authOnly: boolean }> = [
   { href: "/practice", label: "Bảng IPA", authOnly: true },
   { href: "/learning_map", label: "Lộ trình", authOnly: true },
   { href: "/checkin", label: "Điểm danh", authOnly: true },
+  { href: "/shop", label: "Cửa hàng", authOnly: true },
   { href: "/leaderboard", label: "Xếp hạng", authOnly: true },
   { href: "/badges", label: "Huy hiệu", authOnly: true },
 ];
