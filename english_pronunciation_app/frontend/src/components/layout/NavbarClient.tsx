@@ -3,15 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Home, Languages, Map, CalendarCheck, Trophy, Award } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import GemsDisplay from "@/components/gamification/GemsDisplay";
 
 export type NavbarLink = {
   href: string;
   label: string;
-  /** Emoji icon hiển thị trước label (Nielsen H6 — Recognition over Recall).
-   *  `aria-hidden` trên icon → screen reader chỉ đọc label. */
-  icon?: string;
+};
+
+// Map href → Lucide icon component (H6 — Recognition over recall, consistent style).
+// Icons chosen for semantic match: Home, IPA (Languages), Learning Map, Check-in, Ranking, Badges.
+const NAV_ICONS: Record<string, typeof Home> = {
+  "/dashboard": Home,
+  "/practice": Languages,
+  "/learning_map": Map,
+  "/checkin": CalendarCheck,
+  "/leaderboard": Trophy,
+  "/badges": Award,
 };
 
 type NavbarUser = {
@@ -87,10 +96,11 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
                       aria-current={active ? "page" : undefined}
                       className={navLinkClass(active)}
                     >
-                      {link.icon && (
-                        <span aria-hidden="true" className="mr-1.5">
-                          {link.icon}
-                        </span>
+                      {NAV_ICONS[link.href] && (
+                        (() => {
+                          const Icon = NAV_ICONS[link.href];
+                          return <Icon aria-hidden="true" className="mr-1.5 h-4 w-4" strokeWidth={2} />;
+                        })()
                       )}
                       {link.label}
                     </Link>
@@ -186,10 +196,11 @@ export default function NavbarClient({ links, user, isAdmin }: NavbarClientProps
                     aria-current={active ? "page" : undefined}
                     className={mobileLinkClass(active)}
                   >
-                    {link.icon && (
-                      <span aria-hidden="true" className="mr-2">
-                        {link.icon}
-                      </span>
+                    {NAV_ICONS[link.href] && (
+                      (() => {
+                        const Icon = NAV_ICONS[link.href];
+                        return <Icon aria-hidden="true" className="mr-2 h-4 w-4" strokeWidth={2} />;
+                      })()
                     )}
                     {link.label}
                   </Link>
