@@ -1,0 +1,2 @@
+# Audio data sinh ra bởi seed_audio_local.ts (không commit, chạy script để tải)
+frontend/public/audio/*.mp3
